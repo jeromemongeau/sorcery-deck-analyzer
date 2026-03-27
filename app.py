@@ -271,5 +271,6 @@ def archetypes():
 
 if __name__ == "__main__":
     os.makedirs(os.path.join(os.path.dirname(__file__), "static"), exist_ok=True)
-    print("Sorcery Deck Analyzer — http://localhost:5055")
-    app.run(host="127.0.0.1", port=5055, debug=True, use_reloader=False)
+    port = int(os.environ.get("PORT", 5055))
+    print(f"Sorcery Deck Analyzer — http://localhost:{port}")
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
