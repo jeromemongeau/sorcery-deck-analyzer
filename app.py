@@ -147,20 +147,54 @@ def parse_curiosa_text(text: str) -> dict:
     return deck
 
 
-def fetch_curiosa_deck(url: str) -> dict:
-    """Fetch and parse a curiosa.io deck URL."""
-    resp = requests.get(url, timeout=15)
+def fetch_curiosa_deck_api(deck_id: str) -> dict:
+    """Fetch a deck from curiosa.io tRPC API and return parsed deck dict."""
+    headers = {
+        "Origin": "https://curiosa.io",
+        "Referer": "https://curiosa.io/",
+    }
+    inp = f'{{"json":{{"id":"{deck_id}","tracking":false}}}}'
+    trpc_url = (
+        "https://curiosa.io/api/trpc/deck.getAvatarById,deck.getDecklistById"
+        f"?batch=1&input=%7B%220%22:{inp},%221%22:{inp}%7D"
+    )
+    resp = requests.get(trpc_url, headers=headers, timeout=15)
     resp.raise_for_status()
-    # Extract text content — curiosa pages are JS-rendered, but the
-    # text content from scrapling gives us the structured list
-    # For the API, we'll use the MCP scrapling via a simpler approach:
-    # just return the raw text for client-side fetching
-    return resp.text
+    data = resp.json()
+
+    deck = {"avatar": [], "spellbook": [], "atlas": []}
+
+    # Parse avatar (single object)
+    avatar_data = data[0]["result"]["data"]["json"]
+    if avatar_data and avatar_data.get("card"):
+        deck["avatar"].append([avatar_data["card"]["name"], avatar_data["quantity"]])
+
+    # Parse decklist (array of card entries)
+    cards = data[1]["result"]["data"]["json"]
+    for entry in cards:
+        card = entry["card"]
+        qty = entry["quantity"]
+        name = card["name"]
+        card_type = card.get("type", "")
+
+        if card_type == "Site":
+            deck["atlas"].append([name, qty])
+        else:
+            deck["spellbook"].append([name, qty])
+
+    return deck
+
+
+def _extract_deck_id(url: str) -> str:
+    """Extract the deck ID from a curiosa.io URL."""
+    # Handles https://curiosa.io/decks/DECK_ID and variants with query params
+    match = re.search(r"curiosa\.io/decks/([a-zA-Z0-9]+)", url)
+    return match.group(1) if match else ""
 
 
 @app.route("/api/fetch-deck", methods=["POST"])
 def fetch_deck():
-    """Fetch a curiosa.io deck URL via Scrapling MCP and return parsed deck JSON."""
+    """Fetch a curiosa.io deck URL via their tRPC API and return parsed deck JSON."""
     data = request.json
     url = data.get("url", "").strip()
 
@@ -170,17 +204,16 @@ def fetch_deck():
     if "curiosa.io/decks/" not in url:
         return jsonify({"error": "Only curiosa.io deck URLs are supported"}), 400
 
-    try:
-        from scrapling import StealthyFetcher
-        fetcher = StealthyFetcher()
-        response = fetcher.fetch(url, network_idle=True, wait=2000)
-        page_text = response.get_all_text(separator="\n")
+    deck_id = _extract_deck_id(url)
+    if not deck_id:
+        return jsonify({"error": "Could not extract deck ID from URL"}), 400
 
-        deck = parse_curiosa_text(page_text)
+    try:
+        deck = fetch_curiosa_deck_api(deck_id)
         if deck.get("avatar") or deck.get("spellbook") or deck.get("atlas"):
             return jsonify({"deck": deck})
 
-        return jsonify({"error": "Could not parse deck from page. Try pasting the deck list manually."}), 422
+        return jsonify({"error": "Could not parse deck from API. Try pasting the deck list manually."}), 422
 
     except Exception as e:
         return jsonify({"error": f"Failed to fetch: {str(e)}"}), 500
