@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sorcery Threshold Calculator</title>
+<style>
+:root {
+  --bg: #0f0f13;
+  --bg2: #1a1a24;
+  --bg3: #24243a;
+  --border: #3a3a55;
+  --text: #e0dfe8;
+  --text2: #9996b0;
+  --accent: #7b6ff0;
+  --accent2: #9b8fff;
+  --fire: #e85d3a;
+  --water: #3d9be0;
+  --earth: #4ec46a;
+  --air: #c0a0ff;
+  --gold: #f0c050;
+  --danger: #e8443a;
+  --success: #4ec46a;
+  --warn: #e8a83a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+a { color: var(--accent2); }
+
+/* Layout */
+.app { max-width: 1400px; margin: 0 auto; padding: 1rem; }
+
+header {
+  display: flex; align-items: center; gap: 1rem;
+  padding: 1rem 0; border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+header h1 { font-size: 1.4rem; font-weight: 600; }
+header h1 span { color: var(--accent2); }
+
+.tabs {
+  display: flex; gap: 0; border-bottom: 2px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+.tab {
+  padding: 0.6rem 1.2rem; cursor: pointer;
+  border: none; background: none; color: var(--text2);
+  font-size: 0.9rem; font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px; transition: all 0.2s;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* Cards / Sections */
+.card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 1.2rem; margin-bottom: 1rem;
+}
+.card h2 {
+  font-size: 1rem; font-weight: 600; margin-bottom: 0.8rem;
+  color: var(--accent2);
+}
+.card h3 {
+  font-size: 0.85rem; font-weight: 600; margin: 0.8rem 0 0.4rem;
+  color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* Settings row */
+.settings-row {
+  display: flex; gap: 1rem; flex-wrap: wrap; align-items: end;
+  margin-bottom: 1rem;
+}
+.field { display: flex; flex-direction: column; gap: 0.3rem; }
+.field label { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+.field select, .field input {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); padding: 0.5rem 0.8rem; border-radius: 6px;
+  font-size: 0.9rem; min-width: 140px;
+}
+.field select:focus, .field input:focus { outline: none; border-color: var(--accent); }
+.field input[type="number"] { width: 80px; min-width: 80px; }
+
+button.primary {
+  background: var(--accent); color: white; border: none;
+  padding: 0.55rem 1.2rem; border-radius: 6px; cursor: pointer;
+  font-size: 0.9rem; font-weight: 500; transition: background 0.2s;
+}
+button.primary:hover { background: var(--accent2); }
+button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Deck input */
+.deck-input-area {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+}
+@media (max-width: 800px) { .deck-input-area { grid-template-columns: 1fr; } }
+
+textarea {
+  width: 100%; min-height: 200px; resize: vertical;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); padding: 0.8rem; border-radius: 6px;
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.82rem; line-height: 1.5;
+}
+textarea:focus { outline: none; border-color: var(--accent); }
+textarea::placeholder { color: var(--text2); opacity: 0.6; }
+
+/* Results grid */
+.results-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+}
+@media (max-width: 900px) { .results-grid { grid-template-columns: 1fr; } }
+
+/* Mana curve bars */
+.curve-bar-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.curve-bar-label { width: 50px; text-align: right; font-size: 0.8rem; color: var(--text2); }
+.curve-bar-track { flex: 1; height: 20px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.curve-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.curve-bar-count { width: 30px; font-size: 0.8rem; color: var(--text2); }
+
+/* Element sources */
+.elem-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.3rem 0;
+}
+.elem-pip {
+  width: 18px; height: 18px; border-radius: 50%; display: inline-flex;
+  align-items: center; justify-content: center; font-size: 0.65rem;
+  font-weight: 700; color: white;
+}
+.elem-pip.fire { background: var(--fire); }
+.elem-pip.water { background: var(--water); }
+.elem-pip.earth { background: var(--earth); }
+.elem-pip.air { background: var(--air); }
+.elem-count { font-weight: 600; min-width: 30px; }
+.elem-bar { flex: 1; height: 10px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.elem-bar-fill { height: 100%; border-radius: 3px; }
+
+/* Threshold table */
+.th-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.th-table th {
+  text-align: left; padding: 0.5rem 0.6rem;
+  border-bottom: 2px solid var(--border);
+  color: var(--text2); font-weight: 600; font-size: 0.75rem;
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.th-table td {
+  padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border);
+}
+.th-table tr:hover { background: var(--bg3); }
+.th-table .prob-ok { color: var(--success); font-weight: 600; }
+.th-table .prob-warn { color: var(--warn); font-weight: 600; }
+.th-table .prob-bad { color: var(--danger); font-weight: 600; }
+
+.threshold-pips { display: inline-flex; gap: 2px; }
+
+/* Gap summary */
+.gap-row {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.5rem 0.8rem; border-radius: 6px;
+  margin-bottom: 0.4rem; font-size: 0.85rem;
+}
+.gap-row.ok { background: rgba(78,196,106,0.1); border-left: 3px solid var(--success); }
+.gap-row.warn { background: rgba(232,168,58,0.1); border-left: 3px solid var(--warn); }
+.gap-row.bad { background: rgba(232,68,58,0.1); border-left: 3px solid var(--danger); }
+
+/* Stats pills */
+.stat-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.pill {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  background: var(--bg3); padding: 0.25rem 0.6rem;
+  border-radius: 12px; font-size: 0.8rem;
+}
+.pill .count { font-weight: 600; }
+
+/* Quick calc result */
+.quick-result {
+  background: var(--bg3); border-radius: 8px;
+  padding: 1.5rem; text-align: center; margin-top: 1rem;
+}
+.quick-result .big-num { font-size: 3rem; font-weight: 700; }
+.quick-result .label { font-size: 0.85rem; color: var(--text2); margin-top: 0.3rem; }
+.quick-result .detail { font-size: 0.9rem; margin-top: 0.8rem; color: var(--text2); }
+
+/* Assumptions box */
+.assumptions {
+  background: var(--bg3); border-radius: 6px;
+  padding: 0.8rem 1rem; font-size: 0.8rem; color: var(--text2);
+  line-height: 1.6; margin-bottom: 1rem;
+}
+.assumptions strong { color: var(--text); }
+
+/* Loading */
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Rarity colors */
+.rarity-ordinary { color: #aaa; }
+.rarity-elite { color: var(--water); }
+.rarity-exceptional { color: var(--gold); }
+.rarity-unique { color: var(--fire); }
+
+/* Tooltips */
+.tip {
+  cursor: help;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--border); color: var(--text2);
+  font-size: 0.65rem; font-weight: 700;
+  margin-left: 0.4rem; flex-shrink: 0;
+}
+#tooltip-box {
+  display: none; position: fixed;
+  background: #13132a; border: 1px solid var(--accent);
+  color: var(--text); padding: 0.7rem 0.9rem;
+  border-radius: 8px; font-size: 0.8rem; font-weight: 400;
+  white-space: pre-line; width: max-content; max-width: 380px;
+  z-index: 99999; line-height: 1.5;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+  pointer-events: none;
+}
+
+/* Archetype horizontal bars */
+.archetype-bar-row {
+  display: flex; align-items: center; gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.archetype-bar-label { width: 70px; text-align: right; font-size: 0.8rem; color: var(--text2); }
+.archetype-bar-track { flex: 1; height: 18px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.archetype-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; display: flex; align-items: center; padding-left: 6px; font-size: 0.7rem; font-weight: 600; color: white; }
+.archetype-bar-score { width: 36px; font-size: 0.8rem; font-weight: 600; text-align: right; }
+
+/* Sample hand area */
+.sample-hand-cards { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+.hand-section { margin-bottom: 0.5rem; }
+.hand-section-label { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.3rem; }
+
+/* Quality metric bar */
+.quality-metric { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+.quality-label { width: 130px; font-size: 0.82rem; color: var(--text2); }
+.quality-track { flex: 1; height: 14px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.quality-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.quality-value { width: 40px; font-size: 0.82rem; font-weight: 600; text-align: right; }
+
+/* Full-width card in grid */
+.results-grid .full-width { grid-column: 1 / -1; }
+
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <h1><span>Sorcery</span> Threshold Calculator</h1>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-panel="deck-panel">Threshold</button>
+  <button class="tab" data-panel="stats-panel">Deck Stats</button>
+</div>
+
+<!-- ======================== DECK ANALYZER ======================== -->
+<div id="deck-panel" class="panel active">
+
+  <div class="card">
+    <h2>Deck List</h2>
+
+    <!-- URL input -->
+    <div class="settings-row" style="margin-bottom:1rem;">
+      <div class="field" style="flex:1;">
+        <label>Curiosa.io Deck URL</label>
+        <input type="text" id="deck-url-input" placeholder="https://curiosa.io/decks/..." style="width:100%;min-width:350px;">
+      </div>
+      <button class="primary" id="load-url-btn" onclick="loadFromUrl()">Load Deck</button>
+    </div>
+    <div id="url-status" style="font-size:0.82rem;margin-bottom:0.8rem;" class="hidden"></div>
+
+    <!-- Toggle for manual input -->
+    <div style="margin-bottom:0.6rem;">
+      <button style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:0.82rem;text-decoration:underline;" onclick="toggleManualInput()">
+        Or enter deck list manually
+      </button>
+    </div>
+
+    <!-- Manual text inputs (hidden by default) -->
+    <div id="manual-input-area" class="deck-input-area hidden">
+      <div>
+        <div class="field" style="margin-bottom:0.5rem;">
+          <label>Spellbook (Avatar + Spells)</label>
+          <textarea id="spellbook-input" placeholder="1 Imposter
+1 Acid Rain
+4 Kettletop Leprechaun
+3 Root Spider
+...
+
+Format: QUANTITY CARD_NAME
+Avatar detected automatically."></textarea>
+        </div>
+      </div>
+      <div>
+        <div class="field" style="margin-bottom:0.5rem;">
+          <label>Atlas (Sites)</label>
+          <textarea id="atlas-input" placeholder="3 Active Volcano
+3 Annual Fair
+3 Aqueduct
+3 Deep Sea
+...
+
+Format: QUANTITY SITE_NAME"></textarea>
+        </div>
+      </div>
+      <div style="margin-top:0.5rem;">
+        <button class="primary" id="analyze-btn" onclick="analyzeDeck()">Analyze Deck</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="results-section" class="hidden">
+
+    <!-- Settings + Draw Plan (just above threshold) -->
+    <div class="card">
+      <h2>Threshold Settings</h2>
+
+      <!-- Special cards in deck (populated dynamically) -->
+      <div id="special-cards-ref" class="assumptions hidden" style="font-size:0.78rem;line-height:1.7;"></div>
+
+      <!-- Manual adjustments -->
+      <div style="margin-top:0.5rem;">
+        <h3>Adjustments <span class="tip" data-tip="Compensate for special cards not fully modeled.\n\nExtra sites seen: as if you drew more atlas cards (e.g. Land Surveyor, Geomancer).\nExtra spells drawn: as if you drew more spellbook cards (e.g. Sorcerer tap, Battlemage kill).\nExtra threshold: flat pips added to an element's source count (e.g. flooding adds water).">?</span></h3>
+        <div class="settings-row" style="margin-top:0.5rem;flex-wrap:wrap;">
+          <div class="field">
+            <label>Target %</label>
+            <input type="number" id="target-input" value="90" min="50" max="99" step="5" style="width:60px;">
+          </div>
+          <div class="field">
+            <label>Extra sites seen</label>
+            <input type="number" id="adj-extra-sites" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <div class="field">
+            <label>Extra spells drawn</label>
+            <input type="number" id="adj-extra-spells" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <div class="field">
+            <label>Extra fire pips</label>
+            <input type="number" id="adj-fire" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <div class="field">
+            <label>Extra water pips</label>
+            <input type="number" id="adj-water" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <div class="field">
+            <label>Extra earth pips</label>
+            <input type="number" id="adj-earth" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <div class="field">
+            <label>Extra air pips</label>
+            <input type="number" id="adj-air" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <button class="primary" onclick="analyzeDeck()">Re-Analyze</button>
+        </div>
+      </div>
+
+      <h3 style="margin-top:1rem;">
+        Turn-by-Turn Draw Plan
+        <span class="tip" data-tip="Choose what you draw each turn.\nSite draws increase sites seen (threshold sources).\nSpell draws increase chance of drawing cards that provide threshold.\nOn the play: T1 has no draw, the pattern shifts right.">?</span>
+      </h3>
+      <div style="overflow-x:auto;">
+        <table class="th-table" id="draw-planner" style="font-size:0.8rem;">
+          <thead id="dp-thead"></thead>
+          <tbody id="dp-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Threshold Analysis -->
+    <div class="card" id="threshold-card">
+      <h2 style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        Threshold Analysis
+        <span class="tip" data-tip="Uses the hypergeometric distribution to calculate the probability of drawing enough threshold sources by a given turn.\n\nFormula: P(X >= pips) = 1 - hypergeom.cdf(pips-1, atlas_size, sources, sites_seen)\n\nSpellbook sources (Cores, Shrine, etc.) are combined using:\nP(met) = sum over all ways atlas + spellbook can provide the needed pips.\n\nFor multi-element spells, per-element probabilities are multiplied.">?</span>
+        <span style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;font-weight:400;">
+          Current turn:
+          <select id="current-turn-select" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:0.3rem 0.5rem;border-radius:4px;font-size:0.85rem;" onchange="applyCurrentTurn()">
+            <option value="0">On curve (each spell at its mana cost)</option>
+            <option value="1">Turn 1</option>
+            <option value="2">Turn 2</option>
+            <option value="3">Turn 3</option>
+            <option value="4">Turn 4</option>
+            <option value="5">Turn 5</option>
+            <option value="6">Turn 6</option>
+            <option value="7">Turn 7</option>
+            <option value="8">Turn 8</option>
+            <option value="9">Turn 9</option>
+            <option value="10">Turn 10</option>
+          </select>
+          <span class="tip" data-tip="'On curve' shows each spell's probability at the turn matching its mana cost.\n\nSelecting a specific turn shows the probability for ALL spells as if you are on that turn — useful to see what you can reliably cast right now.">?</span>
+        </span>
+      </h2>
+      <div style="overflow-x:auto;">
+        <table class="th-table" id="threshold-table"></table>
+      </div>
+      <div id="gap-summary" style="margin-top:1rem;"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================== DECK STATS ======================== -->
+<div id="stats-panel" class="panel">
+  <div id="stats-empty" style="color:var(--text2);text-align:center;padding:3rem;">
+    Load a deck first to see stats.
+  </div>
+  <div id="stats-content" class="hidden">
+    <div class="results-grid">
+      <div class="card" id="curve-card">
+        <h2>Mana Curve <span class="tip" data-tip="Distribution of mana costs across your spellbook.\nAverage and median help gauge if the deck is aggressive (low) or controlling (high).">?</span></h2>
+        <div id="curve-chart"></div>
+      </div>
+      <div class="card" id="types-card">
+        <h2>Card Types</h2>
+        <div id="types-chart"></div>
+      </div>
+      <div class="card" id="keywords-card">
+        <h2>Keywords & Combat</h2>
+        <div id="keywords-chart"></div>
+      </div>
+      <div class="card" id="spatial-card">
+        <h2>Spatial & Movement <span class="tip" data-tip="Evasion abilities (Airborne, Burrow, etc.), mobility types, and positional keywords.\nEvasion % = fraction of minions with evasion.">?</span></h2>
+        <div id="spatial-chart"></div>
+      </div>
+      <div class="card" id="effects-card">
+        <h2>Effect Categories <span class="tip" data-tip="Categorization of spell and ability effects:\nRemoval, Direct Damage, Card Draw, Buff, Healing, Board Wipe, Token Gen, Recursion, Tutor, Flood, Ward.">?</span></h2>
+        <div id="effects-chart"></div>
+      </div>
+      <div class="card" id="triggered-card">
+        <h2>Triggered Abilities <span class="tip" data-tip="Count of cards with Genesis (enter play), Deathrite (dies), Tap abilities, and Passive effects.">?</span></h2>
+        <div id="triggered-chart"></div>
+      </div>
+      <div class="card" id="archetype-card">
+        <h2>Archetype Indicators <span class="tip" data-tip="Heuristic scores (0-100) for how much your deck leans into each archetype.\nBased on mana curve, card types, keywords, and effect distribution.">?</span></h2>
+        <div id="archetype-chart"></div>
+      </div>
+      <div class="card" id="quality-card">
+        <h2>Card Quality <span class="tip" data-tip="Threat density = minions with 3+ attack per total cards.\nMana efficiency = average power-to-cost ratio.\nInteraction density = removal + damage cards per total cards.">?</span></h2>
+        <div id="quality-chart"></div>
+      </div>
+      <div class="card" id="setinfo-card">
+        <h2>Set Info</h2>
+        <div id="setinfo-chart"></div>
+      </div>
+      <div class="card full-width" id="samplehand-card">
+        <h2>Sample Hand Simulator <span class="tip" data-tip="Draw a random opening hand of 3 spells + 3 sites from your deck.\nUseful for testing how your deck feels on turn 1.">?</span></h2>
+        <div id="samplehand-area">
+          <button class="primary" id="draw-hand-btn" onclick="drawSampleHand()">Draw Hand</button>
+          <div id="samplehand-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.app -->
+
+<div id="tooltip-box"></div>
+
+<script>
+// =====================================================================
+// Tooltip system (positioned via JS to avoid z-index/overflow issues)
+// =====================================================================
+const tooltipBox = document.getElementById('tooltip-box');
+
+document.addEventListener('mouseover', (e) => {
+  const tip = e.target.closest('.tip');
+  if (!tip) return;
+  const text = tip.getAttribute('data-tip');
+  if (!text) return;
+  tooltipBox.textContent = text;
+  tooltipBox.style.display = 'block';
+
+  const rect = tip.getBoundingClientRect();
+  // Position above the ? icon, centered
+  let left = rect.left + rect.width / 2 - tooltipBox.offsetWidth / 2;
+  let top = rect.top - tooltipBox.offsetHeight - 8;
+
+  // If it goes above the viewport, show below instead
+  if (top < 4) {
+    top = rect.bottom + 8;
+  }
+  // Keep within horizontal bounds
+  if (left < 4) left = 4;
+  if (left + tooltipBox.offsetWidth > window.innerWidth - 4) {
+    left = window.innerWidth - tooltipBox.offsetWidth - 4;
+  }
+
+  tooltipBox.style.left = left + 'px';
+  tooltipBox.style.top = top + 'px';
+});
+
+document.addEventListener('mouseout', (e) => {
+  const tip = e.target.closest('.tip');
+  if (tip) tooltipBox.style.display = 'none';
+});
+</script>
+
+<script>
+// =====================================================================
+// Tab switching
+// =====================================================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.panel).classList.add('active');
+  });
+});
+
+// =====================================================================
+// Archetype assumptions display
+// =====================================================================
+const ASSUMPTIONS = {
+  aggro: {
+    label: 'Aggro',
+    mulligan: '2 atlas cards mulliganed',
+    draw: 'Draw site T2, then ~33% of draw steps',
+    sites: 'T1=5, T2-4=6, T5=7, T6-7=8',
+    notes: 'Fast deck, tops out ~6-7 sites'
+  },
+  midrange: {
+    label: 'Mid-range',
+    mulligan: '3 atlas cards mulliganed',
+    draw: 'Draw site ~50% of draw steps',
+    sites: 'T1=5, T2=6, T3-4=7, T5-6=8, T7-8=9, T9=10',
+    notes: 'Balanced deck, reaches 9-10 sites'
+  },
+  pathfinder: {
+    label: 'Pathfinder',
+    mulligan: 'No opening hand (Pathfinder rule)',
+    draw: 'Play top site each turn via ability',
+    sites: 'T1=1, T2=2, T3=3 ... T6-7=6, T8=7, T9=8, T10=9',
+    notes: 'No duplicate sites in atlas'
+  }
+};
+
+function updateAssumptions() {
+  // No longer displayed — archetype is fixed to midrange
+}
+const MAX_DRAW_TURNS = 6; // actual draws (T1-T6 on draw, T2-T7 on play)
+
+function getAdjustments() {
+  return {
+    extra_sites: parseInt(document.getElementById('adj-extra-sites')?.value || '0'),
+    extra_spells: parseInt(document.getElementById('adj-extra-spells')?.value || '0'),
+    extra_pips: {
+      fire: parseInt(document.getElementById('adj-fire')?.value || '0'),
+      water: parseInt(document.getElementById('adj-water')?.value || '0'),
+      earth: parseInt(document.getElementById('adj-earth')?.value || '0'),
+      air: parseInt(document.getElementById('adj-air')?.value || '0'),
+    }
+  };
+}
+
+async function applyCurrentTurn() {
+  if (!loadedDeck) return;
+  const btn = document.getElementById('analyze-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
+
+  const archetype = 'midrange';
+  const onPlay = isOnThePlay();
+  const target = parseInt(document.getElementById('target-input').value) / 100;
+  const currentTurn = parseInt(document.getElementById('current-turn-select').value) || 0;
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        deck: loadedDeck, archetype, on_the_play: onPlay,
+        target_prob: target, draw_schedule: getDrawSchedule(),
+        adjustments: getAdjustments(), current_turn: currentTurn
+      })
+    });
+    const report = await res.json();
+    lastReport = report;
+    lastTarget = target;
+    // Only re-render threshold table + gap + sources, not the whole page
+    renderThresholdSection(report, target, currentTurn);
+  } catch (e) {
+    console.error(e);
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Analyze Deck'; }
+}
+
+function attachSettingsListeners() {
+  // Play/draw listener is now on the select inside the draw table via onPlayDrawChange()
+}
+
+// =====================================================================
+// Draw Planner
+// =====================================================================
+function isOnThePlay() {
+  const pdEl = document.getElementById('play-draw-select');
+  return pdEl ? pdEl.value === 'play' : true;
+}
+
+function getDrawTurns() {
+  // On the play: T1 is empty (no draw), show T1..T1+MAX (6 actual draws)
+  // On the draw: T1..MAX (6 actual draws)
+  const onPlay = isOnThePlay();
+  return onPlay
+    ? { start: 1, end: 1 + MAX_DRAW_TURNS, noDrawTurn: 1 }
+    : { start: 1, end: MAX_DRAW_TURNS, noDrawTurn: 0 };
+}
+
+function buildDrawTable() {
+  const { start, end, noDrawTurn } = getDrawTurns();
+  const thead = document.getElementById('dp-thead');
+  const tbody = document.getElementById('dp-tbody');
+
+  // Header
+  let hdr = '<tr><th>Setup</th>';
+  for (let t = start; t <= end; t++) hdr += `<th>T${t}</th>`;
+  hdr += '</tr>';
+  thead.innerHTML = hdr;
+
+  // Setup cell: play/draw + mulligan counters
+  const onPlay = isOnThePlay();
+  let selRow = `<td style="font-size:0.7rem;">
+    <div class="field" style="gap:0.15rem;margin-bottom:0.3rem;">
+      <select id="play-draw-select" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:0.2rem;border-radius:4px;font-size:0.72rem;width:100%;" onchange="onPlayDrawChange()">
+        <option value="play" ${onPlay ? 'selected' : ''}>On the Play</option>
+        <option value="draw" ${!onPlay ? 'selected' : ''}>On the Draw</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:0.4rem;">
+      <div class="field" style="gap:0.1rem;">
+        <label style="font-size:0.55rem;">Mul. sites</label>
+        <input type="number" id="dp-mulligan" value="2" min="0" max="3" style="width:36px;padding:0.2rem;font-size:0.72rem;" onchange="onMulliganChange('sites')">
+      </div>
+      <div class="field" style="gap:0.1rem;">
+        <label style="font-size:0.55rem;">Mul. spells</label>
+        <input type="number" id="dp-mulligan-spells" value="1" min="0" max="3" style="width:36px;padding:0.2rem;font-size:0.72rem;" onchange="onMulliganChange('spells')">
+      </div>
+    </div>
+    <div style="font-size:0.55rem;color:var(--text2);margin-top:0.1rem;">
+      <span id="dp-mul-total">3</span>/3 mulligans
+    </div>
+  </td>`;
+  for (let t = start; t <= end; t++) {
+    if (t === noDrawTurn) {
+      selRow += `<td id="dp-t${t}" style="text-align:center;color:var(--text2);font-size:0.7rem;">no draw</td>`;
+    } else {
+      selRow += `<td id="dp-t${t}"><select id="dp-draw-${t}" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:0.2rem;border-radius:4px;font-size:0.72rem;width:70px;" onchange="updateDrawCounts()">
+        <option value="atlas">Site</option>
+        <option value="spellbook">Spell</option>
+      </select></td>`;
+    }
+  }
+
+  tbody.innerHTML = `<tr>${selRow}</tr>`;
+}
+
+function onPlayDrawChange() {
+  // Rebuild the whole table since column count changes
+  buildDrawTable();
+  fillDrawPreset('midrange');
+}
+
+function initDrawPlanner() {
+  buildDrawTable();
+  fillDrawPreset('midrange');
+}
+
+function onMulliganChange(source) {
+  const sitesEl = document.getElementById('dp-mulligan');
+  const spellsEl = document.getElementById('dp-mulligan-spells');
+  if (!sitesEl || !spellsEl) return;
+
+  let sites = parseInt(sitesEl.value) || 0;
+  let spells = parseInt(spellsEl.value) || 0;
+
+  // Enforce max 3 total: adjust the other field
+  if (sites + spells > 3) {
+    if (source === 'sites') {
+      spells = 3 - sites;
+      spellsEl.value = Math.max(0, spells);
+    } else {
+      sites = 3 - spells;
+      sitesEl.value = Math.max(0, sites);
+    }
+  }
+
+  // Update total display
+  const totalEl = document.getElementById('dp-mul-total');
+  if (totalEl) totalEl.textContent = sites + spells;
+
+  updateDrawCounts();
+}
+
+function fillDrawPreset(archetype) {
+  const { start, end, noDrawTurn } = getDrawTurns();
+
+  // 7-draw base patterns + mulligan split
+  const presets = {
+    aggro:      { mulSites: 2, mulSpells: 1, base: ['spellbook','spellbook','spellbook','atlas','spellbook','spellbook','spellbook'] },
+    midrange:   { mulSites: 2, mulSpells: 1, base: ['atlas','spellbook','atlas','spellbook','atlas','spellbook','spellbook'] },
+    pathfinder: { mulSites: 0, mulSpells: 0, base: ['atlas','atlas','atlas','atlas','atlas','atlas','atlas'] },
+  };
+  const p = presets[archetype] || presets.midrange;
+  document.getElementById('dp-mulligan').value = p.mulSites;
+  const spellsEl = document.getElementById('dp-mulligan-spells');
+  if (spellsEl) spellsEl.value = p.mulSpells;
+  const totalEl = document.getElementById('dp-mul-total');
+  if (totalEl) totalEl.textContent = p.mulSites + p.mulSpells;
+
+  // Fill the actual draw turns (skipping the no-draw turn)
+  let drawIdx = 0;
+  for (let t = start; t <= end; t++) {
+    if (t === noDrawTurn) continue; // skip no-draw turn
+    const sel = document.getElementById(`dp-draw-${t}`);
+    if (sel) sel.value = p.base[drawIdx] || 'spellbook';
+    drawIdx++;
+  }
+  updateDrawCounts();
+}
+
+function updateDrawCounts() {
+  // No display row anymore — this function is kept for onchange callbacks
+  // that may trigger re-analysis
+}
+
+function getDrawSchedule() {
+  const mulEl = document.getElementById('dp-mulligan');
+  if (!mulEl) return null;
+
+  const { start, end, noDrawTurn } = getDrawTurns();
+  const mulSites = parseInt(mulEl.value) || 0;
+  const mulSpellsEl = document.getElementById('dp-mulligan-spells');
+  const mulSpells = mulSpellsEl ? (parseInt(mulSpellsEl.value) || 0) : 0;
+  const schedule = {
+    opening_sites: 3,
+    mulligan_sites: mulSites,
+    mulligan_spells: mulSpells,
+  };
+  for (let t = start; t <= end; t++) {
+    if (t === noDrawTurn) {
+      schedule[String(t)] = 'none'; // no draw this turn
+    } else {
+      const sel = document.getElementById(`dp-draw-${t}`);
+      schedule[String(t)] = sel ? sel.value : 'spellbook';
+    }
+  }
+  // Fill beyond table with spellbook
+  for (let t = end + 1; t <= 10; t++) {
+    schedule[String(t)] = 'spellbook';
+  }
+  return schedule;
+}
+
+// initDrawPlanner() called after first analysis when elements exist
+
+// =====================================================================
+// Parse deck list text
+// =====================================================================
+function parseDeckList(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  const cards = [];
+  for (const line of lines) {
+    const m = line.trim().match(/^(\d+)\s+(.+)$/);
+    if (m) {
+      cards.push([m[2].trim(), parseInt(m[1])]);
+    }
+  }
+  return cards;
+}
+
+// Known avatar names for detection
+const AVATARS = [
+  'Avatar of Air','Avatar of Earth','Avatar of Fire','Avatar of Water',
+  'Battlemage','Deathspeaker','Elementalist','Enchantress','Pathfinder',
+  'Seer','Sorcerer','Sparkmage','Geomancer','Flamecaller','Waveshaper',
+  'Spellslinger','Archimago','Druid','Templar','Witch','Dragonlord',
+  'Animist','Bladedancer','Corruptor','Duplicator','Harbinger','Imposter',
+  'Interrogator','Ironclad','Magician','Necromancer','Persecutor',
+  'Realm-Eater','Savior'
+];
+
+// =====================================================================
+// URL Loading
+// =====================================================================
+let loadedDeck = null; // stores deck loaded from URL
+let lastReport = null; // stores last analysis report for re-rendering
+let lastTarget = 0.90; // stores last target for re-rendering
+
+function toggleManualInput() {
+  const area = document.getElementById('manual-input-area');
+  area.classList.toggle('hidden');
+}
+
+async function loadFromUrl() {
+  const btn = document.getElementById('load-url-btn');
+  const status = document.getElementById('url-status');
+  const loadingStatus = document.getElementById('loading-status');
+  const url = document.getElementById('deck-url-input').value.trim();
+
+  if (!url) { status.innerHTML = '<span style="color:var(--danger)">Enter a URL</span>'; status.classList.remove('hidden'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Loading...';
+  status.innerHTML = '<span class="spinner"></span> Fetching deck from curiosa.io...';
+  status.style.color = 'var(--text2)';
+  status.classList.remove('hidden');
+
+  try {
+    const res = await fetch('/api/fetch-deck', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      status.innerHTML = `<span style="color:var(--danger)">${data.error}</span>`;
+      loadedDeck = null;
+    } else {
+      loadedDeck = data.deck;
+      const nAvatar = loadedDeck.avatar.length;
+      const nSpells = loadedDeck.spellbook.reduce((s, c) => s + c[1], 0);
+      const nSites = loadedDeck.atlas.reduce((s, c) => s + c[1], 0);
+      status.innerHTML = `<span style="color:var(--success)">Loaded!</span> ${nAvatar ? loadedDeck.avatar[0][0] : '?'} | ${nSpells} spells | ${nSites} sites`;
+
+      // Auto-analyze
+      btn.disabled = false;
+      btn.textContent = 'Load Deck';
+      await analyzeDeck();
+      return;
+    }
+  } catch (e) {
+    status.innerHTML = `<span style="color:var(--danger)">Error: ${e.message}</span>`;
+    loadedDeck = null;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Load Deck';
+}
+
+// showDeckPreview removed — deck auto-analyzes on load
+
+// =====================================================================
+// Deck Analyzer
+// =====================================================================
+async function analyzeDeck() {
+  const btn = document.getElementById('analyze-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+
+  let deck;
+
+  if (loadedDeck && loadedDeck.spellbook.length > 0) {
+    // Use URL-loaded deck
+    deck = loadedDeck;
+  } else {
+    // Fall back to manual text input
+    const spellbookRaw = parseDeckList(document.getElementById('spellbook-input').value);
+    const atlasRaw = parseDeckList(document.getElementById('atlas-input').value);
+
+    let avatar = [];
+    const spellbook = [];
+    for (const [name, qty] of spellbookRaw) {
+      if (AVATARS.some(a => a.toLowerCase() === name.toLowerCase())) {
+        avatar.push([name, qty]);
+      } else {
+        spellbook.push([name, qty]);
+      }
+    }
+    deck = { avatar, spellbook, atlas: atlasRaw };
+  }
+
+  const archetype = 'midrange';
+  const onPlay = isOnThePlay();
+  const target = parseInt(document.getElementById('target-input').value) / 100;
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ deck, archetype, on_the_play: onPlay, target_prob: target, draw_schedule: getDrawSchedule(), adjustments: getAdjustments() })
+    });
+    const report = await res.json();
+    lastReport = report;
+    lastTarget = target;
+    // Reset current turn selector
+    const cts = document.getElementById('current-turn-select');
+    if (cts) cts.value = '0';
+    renderResults(report, target);
+    renderSpecialCardsRef(report);
+    document.getElementById('results-section').classList.remove('hidden');
+    attachSettingsListeners();
+    if (!window._drawPlannerInitialized) {
+      initDrawPlanner();
+      window._drawPlannerInitialized = true;
+    }
+    updateAssumptions();
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Analyze Deck';
+}
+
+// =====================================================================
+// Render Results
+// =====================================================================
+const ELEM_COLORS = { fire: 'var(--fire)', water: 'var(--water)', earth: 'var(--earth)', air: 'var(--air)' };
+
+function pipSpan(element, count) {
+  let s = '';
+  const letter = {fire:'F',water:'W',earth:'E',air:'A'}[element] || '?';
+  for (let i = 0; i < count; i++) s += `<span class="elem-pip ${element}">${letter}</span>`;
+  return s;
+}
+
+function probClass(p, target) {
+  if (p >= target * 100) return 'prob-ok';
+  if (p >= target * 100 - 10) return 'prob-warn';
+  return 'prob-bad';
+}
+
+function renderResults(report, target) {
+  const stats = report.stats;
+  const th = report.threshold;
+
+  // Show stats tab content
+  const statsEmpty = document.getElementById('stats-empty');
+  const statsContent = document.getElementById('stats-content');
+  if (statsEmpty) statsEmpty.classList.add('hidden');
+  if (statsContent) statsContent.classList.remove('hidden');
+
+  // Mana Curve
+  const curve = stats.mana_curve;
+  const maxCurve = Math.max(...Object.values(curve.distribution), 1);
+  let curveHtml = '';
+  for (let cost = 0; cost <= Math.max(...Object.keys(curve.distribution).map(Number)); cost++) {
+    const count = curve.distribution[cost] || 0;
+    const pct = (count / maxCurve * 100);
+    curveHtml += `<div class="curve-bar-row">
+      <div class="curve-bar-label">${cost} mana</div>
+      <div class="curve-bar-track"><div class="curve-bar-fill" style="width:${pct}%;background:var(--accent);"></div></div>
+      <div class="curve-bar-count">${count}</div>
+    </div>`;
+  }
+  curveHtml += `<div style="text-align:center; margin-top:0.6rem; font-size:0.85rem; color:var(--text2);">
+    Average: <strong>${curve.average}</strong> &nbsp;|&nbsp; Median: <strong>${curve.median}</strong></div>`;
+
+
+  document.getElementById('curve-chart').innerHTML = curveHtml;
+
+
+  // Type Breakdown
+  const tb = stats.type_breakdown;
+  let typesHtml = '<div class="stat-pills">';
+  for (const [t, c] of Object.entries(tb.types)) {
+    typesHtml += `<span class="pill"><span class="count">${c}</span> ${t}</span>`;
+  }
+  typesHtml += '</div>';
+  if (tb.minion_subtypes && Object.keys(tb.minion_subtypes).length) {
+    typesHtml += '<h3>Minion Subtypes</h3><div class="stat-pills">';
+    for (const [st, c] of Object.entries(tb.minion_subtypes)) {
+      typesHtml += `<span class="pill"><span class="count">${c}</span> ${st}</span>`;
+    }
+    typesHtml += '</div>';
+  }
+  // Rarity
+  const rb = stats.rarity_breakdown;
+  if (rb && Object.keys(rb).length) {
+    typesHtml += '<h3>Rarity</h3><div class="stat-pills">';
+    for (const [r, c] of Object.entries(rb)) {
+      const cls = 'rarity-' + r.toLowerCase();
+      typesHtml += `<span class="pill ${cls}"><span class="count">${c}</span> ${r}</span>`;
+    }
+    typesHtml += '</div>';
+  }
+
+  // Deck Composition
+  const dc = stats.deck_composition;
+  if (dc) {
+    typesHtml += '<h3>Deck Composition</h3><div class="stat-pills">';
+    if (dc.permanent_count != null) typesHtml += `<span class="pill"><span class="count">${dc.permanent_count}</span> permanents</span>`;
+    if (dc.non_permanent_count != null) typesHtml += `<span class="pill"><span class="count">${dc.non_permanent_count}</span> non-permanents</span>`;
+    if (dc.unique_cards != null) typesHtml += `<span class="pill"><span class="count">${dc.unique_cards}</span> unique cards</span>`;
+    if (dc.singletons != null) typesHtml += `<span class="pill"><span class="count">${dc.singletons}</span> singletons</span>`;
+    if (dc.avg_copies != null) typesHtml += `<span class="pill">avg copies: <span class="count">${dc.avg_copies}</span></span>`;
+    if (dc.minion_to_spell_ratio != null) typesHtml += `<span class="pill">minion:spell <span class="count">${dc.minion_to_spell_ratio}</span></span>`;
+    typesHtml += '</div>';
+  }
+
+  document.getElementById('types-chart').innerHTML = typesHtml;
+
+  // Keywords + Combat
+  const kw = stats.keyword_census;
+  const cs = stats.combat_stats;
+  let kwHtml = '';
+  if (kw && Object.keys(kw).length) {
+    kwHtml += '<h3>Keywords</h3><div class="stat-pills">';
+    for (const [k, c] of Object.entries(kw)) {
+      kwHtml += `<span class="pill"><span class="count">${c}</span> ${k}</span>`;
+    }
+    kwHtml += '</div>';
+  }
+  if (cs && Object.keys(cs).length) {
+    kwHtml += '<h3>Combat (Minions)</h3>';
+    if (cs.avg_attack != null) kwHtml += `<div style="font-size:0.85rem;">Attack &mdash; Avg: <strong>${cs.avg_attack}</strong>, Median: <strong>${cs.median_attack}</strong></div>`;
+    if (cs.avg_defence != null) kwHtml += `<div style="font-size:0.85rem;">Defence &mdash; Avg: <strong>${cs.avg_defence}</strong>, Median: <strong>${cs.median_defence}</strong></div>`;
+  }
+
+  // Combat Extended
+  const ce = stats.combat_extended;
+  if (ce) {
+    kwHtml += '<h3>Combat Profile</h3><div class="stat-pills">';
+    if (ce.offensive != null) kwHtml += `<span class="pill" style="border-left:3px solid var(--fire);"><span class="count">${ce.offensive}</span> offensive</span>`;
+    if (ce.defensive != null) kwHtml += `<span class="pill" style="border-left:3px solid var(--water);"><span class="count">${ce.defensive}</span> defensive</span>`;
+    if (ce.balanced != null) kwHtml += `<span class="pill" style="border-left:3px solid var(--earth);"><span class="count">${ce.balanced}</span> balanced</span>`;
+    if (ce.zero_attack != null) kwHtml += `<span class="pill"><span class="count">${ce.zero_attack}</span> zero-atk</span>`;
+    if (ce.max_attack != null) kwHtml += `<span class="pill">max atk: <span class="count">${ce.max_attack}</span></span>`;
+    kwHtml += '</div>';
+    if (ce.avg_power_to_cost != null) kwHtml += `<div style="font-size:0.82rem;margin-top:0.3rem;color:var(--text2);">Avg power/cost: <strong style="color:var(--text);">${ce.avg_power_to_cost}</strong></div>`;
+    if (ce.avg_efficiency != null) kwHtml += `<div style="font-size:0.82rem;color:var(--text2);">Avg efficiency: <strong style="color:var(--text);">${ce.avg_efficiency}</strong></div>`;
+  }
+
+  document.getElementById('keywords-chart').innerHTML = kwHtml;
+
+  // ---- Spatial & Movement ----
+  const sm = stats.spatial_movement;
+  if (sm) {
+    let smHtml = '';
+    // Evasion
+    if (sm.evasion && Object.keys(sm.evasion).length) {
+      smHtml += '<h3>Evasion</h3><div class="stat-pills">';
+      for (const [k, v] of Object.entries(sm.evasion)) {
+        smHtml += `<span class="pill"><span class="count">${v}</span> ${k}</span>`;
+      }
+      smHtml += '</div>';
+      if (sm.evasion_pct != null) smHtml += `<div style="font-size:0.82rem;margin-top:0.3rem;color:var(--text2);">Evasion %: <strong style="color:var(--text);">${sm.evasion_pct}%</strong></div>`;
+    }
+    if (sm.immobile != null) smHtml += `<div style="font-size:0.82rem;margin-top:0.3rem;color:var(--text2);">Immobile: <strong style="color:var(--text);">${sm.immobile}</strong></div>`;
+    if (sm.ranged != null) smHtml += `<div style="font-size:0.82rem;color:var(--text2);">Ranged: <strong style="color:var(--text);">${sm.ranged}</strong></div>`;
+    if (sm.positional_cards != null) smHtml += `<div style="font-size:0.82rem;color:var(--text2);">Positional cards: <strong style="color:var(--text);">${sm.positional_cards}</strong></div>`;
+    document.getElementById('spatial-chart').innerHTML = smHtml;
+  }
+
+
+  // ---- Effect Categories ----
+  const ec = stats.effect_categories;
+  if (ec && Object.keys(ec).length) {
+    let ecHtml = '<div class="stat-pills">';
+    const ecColors = {
+      'Card Draw': 'var(--water)', 'Removal': 'var(--danger)', 'Direct Damage': 'var(--fire)',
+      'Board Wipe': 'var(--danger)', 'Buff': 'var(--success)', 'Healing': 'var(--success)',
+      'Token Gen': 'var(--gold)', 'Recursion': 'var(--air)', 'Tutor': 'var(--accent)',
+      'Flood': 'var(--water)', 'Ward': 'var(--earth)'
+    };
+    for (const [cat, cnt] of Object.entries(ec)) {
+      const clr = ecColors[cat] || 'var(--text2)';
+      ecHtml += `<span class="pill" style="border-left:3px solid ${clr};"><span class="count">${cnt}</span> ${cat}</span>`;
+    }
+    ecHtml += '</div>';
+    document.getElementById('effects-chart').innerHTML = ecHtml;
+  }
+
+
+  // ---- Triggered Abilities ----
+  const ta = stats.triggered_abilities;
+  if (ta) {
+    let taHtml = '<div class="stat-pills">';
+    const taLabels = {genesis: 'Genesis', deathrite: 'Deathrite', tap_ability: 'Tap Ability', passive: 'Passive'};
+    const taColors = {genesis: 'var(--success)', deathrite: 'var(--danger)', tap_ability: 'var(--gold)', passive: 'var(--air)'};
+    for (const [key, label] of Object.entries(taLabels)) {
+      if (ta[key] != null) {
+        taHtml += `<span class="pill" style="border-left:3px solid ${taColors[key]};"><span class="count">${ta[key]}</span> ${label}</span>`;
+      }
+    }
+    taHtml += '</div>';
+    document.getElementById('triggered-chart').innerHTML = taHtml;
+  }
+
+  // ---- Archetype Indicators (horizontal bar chart) ----
+  const ai = stats.archetype_indicators;
+  if (ai) {
+    const archetypes = [
+      {key: 'aggro', label: 'Aggro', color: 'var(--fire)'},
+      {key: 'midrange', label: 'Midrange', color: 'var(--earth)'},
+      {key: 'control', label: 'Control', color: 'var(--water)'},
+      {key: 'tempo', label: 'Tempo', color: 'var(--air)'},
+    ];
+    let aiHtml = '';
+    for (const a of archetypes) {
+      const score = ai[a.key] || 0;
+      aiHtml += `<div class="archetype-bar-row">
+        <div class="archetype-bar-label">${a.label}</div>
+        <div class="archetype-bar-track"><div class="archetype-bar-fill" style="width:${score}%;background:${a.color};">${score >= 15 ? score : ''}</div></div>
+        <div class="archetype-bar-score" style="color:${a.color};">${score}</div>
+      </div>`;
+    }
+    document.getElementById('archetype-chart').innerHTML = aiHtml;
+  }
+
+  // ---- Card Quality ----
+  const cq = stats.card_quality;
+  if (cq) {
+    let cqHtml = '';
+    const metrics = [
+      {key: 'threat_density', label: 'Threat Density', color: 'var(--fire)'},
+      {key: 'mana_efficiency', label: 'Mana Efficiency', color: 'var(--gold)'},
+      {key: 'interaction_density', label: 'Interaction', color: 'var(--water)'},
+    ];
+    for (const m of metrics) {
+      const val = cq[m.key];
+      if (val == null) continue;
+      // Display as percentage if <= 1, raw otherwise
+      const display = val <= 1 ? (val * 100).toFixed(0) + '%' : val;
+      const barPct = val <= 1 ? (val * 100) : Math.min(val, 100);
+      cqHtml += `<div class="quality-metric">
+        <div class="quality-label">${m.label}</div>
+        <div class="quality-track"><div class="quality-fill" style="width:${barPct}%;background:${m.color};"></div></div>
+        <div class="quality-value" style="color:${m.color};">${display}</div>
+      </div>`;
+    }
+    document.getElementById('quality-chart').innerHTML = cqHtml;
+  }
+
+  // ---- Set Info ----
+  const si = stats.set_info;
+  if (si) {
+    let siHtml = '';
+    if (si.sets && Object.keys(si.sets).length) {
+      siHtml += '<div class="stat-pills">';
+      for (const [setName, cnt] of Object.entries(si.sets)) {
+        siHtml += `<span class="pill"><span class="count">${cnt}</span> ${setName}</span>`;
+      }
+      siHtml += '</div>';
+    }
+    if (si.artist_count != null) siHtml += `<div style="font-size:0.82rem;margin-top:0.5rem;color:var(--text2);">Unique artists: <strong style="color:var(--text);">${si.artist_count}</strong></div>`;
+    document.getElementById('setinfo-chart').innerHTML = siHtml;
+  }
+
+  // Threshold sections
+  const currentTurn = parseInt(document.getElementById('current-turn-select')?.value || '0');
+  renderThresholdSection(report, target, currentTurn);
+}
+
+function renderThresholdSection(report, target, currentTurn) {
+  const th = report.threshold;
+  const elemSources = th.element_sources;
+  const spells = th.spells;
+
+  // Turn label for header
+  const turnLabel = currentTurn > 0 ? ` (all at Turn ${currentTurn})` : '';
+
+  // Gap Summary
+  const gapMap = {};
+  for (const sp of spells) {
+    for (const [elem, detail] of Object.entries(sp.element_details)) {
+      if (!gapMap[elem]) gapMap[elem] = { have: detail.sources, maxNeed: 0 };
+      if (!sp.meets_target && sp.recommendations && sp.recommendations[elem]) {
+        const need = sp.recommendations[elem].need;
+        if (need > gapMap[elem].maxNeed) gapMap[elem].maxNeed = need;
+      }
+    }
+  }
+
+  let gapHtml = `<h3>Element Gap Summary${turnLabel} <span class="tip" data-tip="Compares your atlas sources against the worst-case spell for each element.\n'Need' is the minimum sources required to hit the target probability.\nGreen = all spells covered. Yellow = small gap. Red = large gap (4+).">?</span></h3>`;
+  for (const elem of ['fire', 'water', 'earth', 'air']) {
+    const g = gapMap[elem];
+    if (!g) continue;
+    const have = elemSources[elem] ? elemSources[elem].count : 0;
+    if (g.maxNeed > 0) {
+      const deficit = g.maxNeed - have;
+      const cls = deficit >= 4 ? 'bad' : 'warn';
+      gapHtml += `<div class="gap-row ${cls}">${pipSpan(elem, 1)} <strong>${elem.charAt(0).toUpperCase() + elem.slice(1)}</strong>: have <strong>${have}</strong>, need <strong>${g.maxNeed}</strong> for worst-case spells (<strong>+${deficit}</strong> needed)</div>`;
+    } else if (have > 0) {
+      gapHtml += `<div class="gap-row ok">${pipSpan(elem, 1)} <strong>${elem.charAt(0).toUpperCase() + elem.slice(1)}</strong>: <strong>${have}</strong> sources &mdash; all spells on curve</div>`;
+    }
+  }
+  document.getElementById('gap-summary').innerHTML = gapHtml;
+
+  // Threshold table
+  let tableHtml = `<thead><tr>
+    <th>Spell</th><th>Qty</th><th>Cost</th><th>Threshold</th>
+    <th>Draw % <span class="tip" data-tip="Probability of having at least 1 copy of this spell in hand by the target turn.\nUses hypergeometric: P(draw >= 1) from ${spells.length > 0 ? 'spellbook' : '60 cards'} after N spell draws.\nIncludes 3 opening hand spells + mulligan + spellbook draws from the draw plan.">?</span></th>
+    <th>Sites <span class="tip" data-tip="Atlas cards seen by this turn.\nIncludes opening hand + mulligans + draw steps.">?</span></th>
+    <th>Thresh % <span class="tip" data-tip="Probability of meeting ALL threshold requirements by this turn.\nGreen >= target, Yellow = close, Red = far below.">?</span></th>
+    <th>Needed <span class="tip" data-tip="Sources needed vs. have to reach target probability.">?</span></th>
+  </tr></thead><tbody>`;
+
+  for (const sp of spells) {
+    const pc = probClass(sp.combined_probability, target);
+    let thPips = '';
+    for (const [elem, detail] of Object.entries(sp.element_details)) {
+      thPips += pipSpan(elem, detail.pips) + ' ';
+    }
+
+    let neededCol = '';
+    if (!sp.meets_target && sp.recommendations) {
+      const parts = [];
+      for (const [elem, r] of Object.entries(sp.recommendations)) {
+        parts.push(`${r.need} ${elem} (have ${r.have})`);
+      }
+      neededCol = parts.join(', ');
+      if (sp.later_turn) {
+        neededCol += `<br><span style="color:var(--text2)">or T${sp.later_turn.turn} at ${sp.later_turn.probability}%</span>`;
+      }
+    } else {
+      neededCol = '<span style="color:var(--success)">OK</span>';
+    }
+
+    // Highlight if spell can't even be cast yet (cost > current turn)
+    const cantCast = currentTurn > 0 && sp.cost > currentTurn;
+    const rowStyle = cantCast ? 'opacity:0.35;' : '';
+
+    // Draw probability color
+    const drawPc = sp.draw_probability >= 50 ? 'color:var(--text)' : sp.draw_probability >= 25 ? 'color:var(--text2)' : 'color:var(--text2);opacity:0.6';
+
+    tableHtml += `<tr style="${rowStyle}">
+      <td>${sp.name}</td>
+      <td>${sp.qty}</td>
+      <td>${sp.cost}</td>
+      <td><span class="threshold-pips">${thPips}</span></td>
+      <td style="${drawPc};font-size:0.82rem;" title="T${sp.target_turn} | ${sp.spells_seen || '?'} spells seen">${sp.draw_probability}%</td>
+      <td>${sp.sites_seen}</td>
+      <td class="${pc}">${sp.combined_probability}%</td>
+      <td style="font-size:0.8rem;">${neededCol}</td>
+    </tr>`;
+  }
+  tableHtml += '</tbody>';
+  document.getElementById('threshold-table').innerHTML = tableHtml;
+
+}
+
+function renderSpecialCardsRef(report) {
+  const cards = report.special_cards_in_deck || [];
+  const el = document.getElementById('special-cards-ref');
+  if (!el) return;
+
+  if (cards.length === 0) {
+    el.classList.add('hidden');
+    return;
+  }
+
+  const hasUnmodeled = cards.some(c => !c.modeled);
+
+  const CALC_TIPS = {
+    pay_mana: 'Counted as 1 source for all elements in atlas source totals.\nThe +1 mana cost is noted but not subtracted from castable turn.',
+    innately_flooded: 'Counted as 1 water source per copy in atlas source totals.\nThe site has no threshold in the card database but is treated as water because it is flooded.',
+    conditional_threshold: 'Counted as a full source for its element(s) in atlas source totals.\nThe downside condition is not modeled — assumed to be active.',
+    in_play: 'Counted via combined hypergeometric probability.\nThe engine calculates P(draw this card from spellbook by turn N) and combines it with atlas threshold probability.',
+    always: 'All threshold requirements are reduced by 1 pip.\nA spell needing FF becomes effectively F, a spell needing W becomes free.',
+    archetype_override: 'Forces the Pathfinder archetype and sites-seen table.\nNo opening hand sites, plays top site each turn.',
+    conditional_note: 'Threshold is already in the card database and counted in atlas source totals.\nThe condition (empty site / adjacent to void) is assumed to be met.',
+  };
+  const MANUAL_TIPS = {
+    scry: 'Add +1 to Extra sites seen for every 2 turns you expect to scry.',
+    flood_ability: 'Add +1 to Extra water pips for each site you expect to flood.',
+    play_extra_site: 'Add +1 to Extra sites seen if you expect to use this ability.',
+    draw_site: 'Add +1 to Extra sites seen per 3-4 copies in deck.',
+    draw_site_deathrite: 'Add +1 to Extra sites seen per 4 copies, less reliable than genesis.',
+    play_top_site: 'Add +1 to Extra sites seen if you expect to use this.',
+    draw_and_play_site: 'Add +1 to Extra sites seen per 2-3 copies.',
+    scry_atlas: 'Add +1 to Extra sites seen (improves atlas quality, not quantity).',
+    ignore_threshold: 'Spells cast via this card ignore threshold entirely.\nNo adjustment needed — just know these spells bypass the check.',
+    remove_threshold: 'This card removes threshold from sites.\nConsider reducing element pips if your opponent might use this against you.',
+    flood_aura: 'Add +1 to Extra water pips per site you expect to flood.\nNote: flooded sites lose non-water threshold.',
+    flood_site: 'Add +1 to Extra water pips (the site where this minion is placed becomes water).',
+    flood_all: 'If cast, all sites become water. Dramatically changes threshold landscape.',
+    genesis_temporary: 'Provides extra elements only on the turn it enters play.\nPartial source — not counted in totals.',
+    genesis_choose: 'Becomes one element permanently. Add +1 pip to the element you plan to choose.',
+    copy: 'Copies a nearby site. Add +1 pip to the element of the site you expect to copy.',
+    flood: 'Already counted as 1 water. Add +0.33 to Extra water pips for the flood ability.',
+  };
+
+  let html = '<strong>Special cards in your deck that affect threshold:</strong><br>';
+  for (const c of cards) {
+    const tipText = c.modeled ? (CALC_TIPS[c.condition] || 'Fully modeled in calculations.') : (MANUAL_TIPS[c.condition] || 'Use manual adjustments to compensate.');
+    if (c.modeled) {
+      html += `<span style="color:var(--success);">${c.name}</span> <span class="tip" data-tip="${tipText.replace(/"/g, '&quot;')}">?</span> — <span style="color:var(--text2);">${c.note}</span><br>`;
+    } else {
+      html += `<span style="color:var(--warn);">${c.name}</span> <span class="tip" data-tip="${tipText.replace(/"/g, '&quot;')}">?</span> — <span style="color:var(--text2);">${c.note}</span><br>`;
+    }
+  }
+  if (hasUnmodeled) {
+    html += '<span style="color:var(--text2);font-style:italic;">Use the adjustments below to compensate for <span style="color:var(--warn);">orange</span> cards.</span>';
+  }
+
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+}
+
+function renderSourcesDetail(report) {
+  const th = report.threshold;
+  const stats = report.stats;
+  const ed = stats.element_distribution;
+  const elemSources = th.element_sources;
+
+  let html = '';
+
+  for (const elem of ['fire', 'water', 'earth', 'air']) {
+    const src = elemSources[elem];
+    if (!src) continue;
+
+    html += `<div style="margin-bottom:1rem;">
+      <h3 style="display:flex;align-items:center;gap:0.4rem;">
+        ${pipSpan(elem, 1)}
+        ${elem.charAt(0).toUpperCase() + elem.slice(1)} &mdash; ${src.count} atlas sources
+      </h3>`;
+
+    // Atlas contributors
+    html += '<div style="margin:0.4rem 0 0.3rem;"><span style="color:var(--text2);font-size:0.75rem;text-transform:uppercase;">Atlas sites:</span></div>';
+    html += '<div class="stat-pills">';
+    for (const c of src.contributors) {
+      html += `<span class="pill">${c}</span>`;
+    }
+    html += '</div>';
+
+    // Spellbook sources for this element
+    const spellSources = [];
+    const spells = report.threshold.spells || [];
+    // Gather spellbook source cards from element_details
+    // We need to check the raw data — let's look at all spells' element_details
+    let sbCount = 0;
+    for (const sp of spells) {
+      const detail = sp.element_details[elem];
+      if (detail && detail.spellbook_sources > 0) {
+        sbCount = detail.spellbook_sources;
+        break;
+      }
+    }
+
+    if (sbCount > 0) {
+      html += '<div style="margin:0.5rem 0 0.3rem;"><span style="color:var(--text2);font-size:0.75rem;text-transform:uppercase;">Spellbook sources (' + sbCount + ' cards):</span>';
+      html += ` <span class="tip" data-tip="These spellbook cards provide ${elem} threshold when in play.\nThe probability of drawing them is calculated using hypergeometric distribution on the spellbook:\nP(draw >= 1) from ${sbCount} cards in a 60-card spellbook after N spell draws.">?</span>`;
+      html += '</div>';
+      html += '<div class="stat-pills">';
+
+      // Find the actual card names from the deck
+      const spellbookSourceNames = findSpellbookSourceNames(report, elem);
+      for (const [name, qty] of spellbookSourceNames) {
+        html += `<span class="pill" style="border:1px solid var(--gold);">${qty > 1 ? qty+'x ' : ''}${name}</span>`;
+      }
+      html += '</div>';
+    }
+
+    // Special sites for this element
+    if (ed.special_sites) {
+      const condLabels = {
+        pay_mana: 'costs 1 mana', genesis_choose: 'choose on genesis', copy: 'copies nearby',
+        innately_flooded: 'flooded = water', conditional_threshold: 'conditional',
+        genesis_temporary: 'genesis only', scry_atlas: 'scry atlas'
+      };
+      const specials = ed.special_sites.filter(([n, elems, q, c]) => elems.includes(elem));
+      if (specials.length > 0) {
+        html += '<div style="margin:0.5rem 0 0.3rem;"><span style="color:var(--text2);font-size:0.75rem;text-transform:uppercase;">Special sites:</span></div>';
+        html += '<div class="stat-pills">';
+        for (const [name, elems, qty, condition] of specials) {
+          html += `<span class="pill" style="border:1px solid var(--gold);">${qty > 1 ? qty+'x ' : ''}${name} <span style="color:var(--gold);font-size:0.7rem;">${condLabels[condition] || condition}</span></span>`;
+        }
+        html += '</div>';
+      }
+    }
+
+    html += '</div>';
+  }
+
+  document.getElementById('sources-detail').innerHTML = html;
+}
+
+// Helper: find spellbook card names that provide threshold for an element
+function findSpellbookSourceNames(report, element) {
+  // We don't have this from the API directly, so we'll reconstruct from known special cards
+  const SPELLBOOK_PROVIDERS = {
+    fire: ['Ruby Core', 'Blacksmith Family', 'Shrine of the Dragonlord'],
+    water: ['Aquamarine Core', "Fisherman's Family", 'Shrine of the Dragonlord'],
+    earth: ['Onyx Core', 'Common Cottagers', 'Shrine of the Dragonlord'],
+    air: ['Amethyst Core', 'Castle Servants', 'Shrine of the Dragonlord'],
+  };
+
+  const providers = SPELLBOOK_PROVIDERS[element] || [];
+  const result = [];
+  const deck = loadedDeck || {};
+  const spellbook = deck.spellbook || [];
+
+  for (const [name, qty] of spellbook) {
+    if (providers.some(p => p.toLowerCase() === name.toLowerCase())) {
+      result.push([name, qty]);
+    }
+  }
+  return result;
+}
+
+// =====================================================================
+// Quick Calculator
+// =====================================================================
+async function quickCalc() {
+  const data = {
+    atlas_size: parseInt(document.getElementById('q-atlas').value),
+    sources: parseInt(document.getElementById('q-sources').value),
+    pips: parseInt(document.getElementById('q-pips').value),
+    turn: parseInt(document.getElementById('q-turn').value),
+    archetype: document.getElementById('q-archetype').value,
+    on_the_play: document.getElementById('q-playdraw').value === 'play',
+  };
+
+  const res = await fetch('/api/quick', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  const result = await res.json();
+
+  const pc = result.probability >= 90 ? 'var(--success)' : result.probability >= 80 ? 'var(--warn)' : 'var(--danger)';
+  document.getElementById('quick-result').classList.remove('hidden');
+  document.getElementById('quick-result').innerHTML =
+    `<div class="big-num" style="color:${pc}">${result.probability}%</div>
+     <div class="label">Probability of hitting ${data.pips} pip(s) by turn ${data.turn}</div>
+     <div class="detail">
+       ${data.sources} sources in ${data.atlas_size}-card atlas | ${result.sites_seen} sites seen by T${data.turn}<br>
+       <strong>Min sources for 90%: ${result.min_sources_90}</strong>
+       ${data.sources < result.min_sources_90
+         ? ` &mdash; <span style="color:var(--danger)">need +${result.min_sources_90 - data.sources} more</span>`
+         : ` &mdash; <span style="color:var(--success)">you're covered</span>`}
+     </div>`;
+
+  // Sweep chart
+  await renderSweep(data);
+}
+
+async function renderSweep(data) {
+  const card = document.getElementById('sweep-card');
+  card.classList.remove('hidden');
+  let html = '<div style="margin-top:0.5rem;">';
+  const promises = [];
+  for (let s = 1; s <= data.atlas_size; s++) {
+    promises.push(
+      fetch('/api/quick', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({...data, sources: s})
+      }).then(r => r.json()).then(r => ({sources: s, prob: r.probability}))
+    );
+  }
+  const results = await Promise.all(promises);
+
+  for (const r of results) {
+    const color = r.prob >= 90 ? 'var(--success)' : r.prob >= 80 ? 'var(--warn)' : r.prob < 50 ? 'var(--danger)' : 'var(--text2)';
+    const highlight = r.sources === data.sources ? 'border:2px solid var(--accent);' : '';
+    html += `<div style="display:inline-flex;flex-direction:column;align-items:center;width:28px;${highlight}border-radius:4px;padding:2px;">
+      <div style="height:60px;width:16px;background:var(--bg);border-radius:2px;display:flex;align-items:end;overflow:hidden;">
+        <div style="width:100%;height:${r.prob}%;background:${color};border-radius:2px;"></div>
+      </div>
+      <div style="font-size:0.6rem;color:var(--text2);margin-top:2px;">${r.sources}</div>
+    </div>`;
+  }
+  html += '</div>';
+  html += `<div style="font-size:0.75rem;color:var(--text2);margin-top:0.5rem;">
+    Each bar = probability with N sources | Highlighted = your current count (${data.sources})</div>`;
+  document.getElementById('sweep-chart').innerHTML = html;
+}
+
+// =====================================================================
+// Threshold Table
+// =====================================================================
+async function loadTable() {
+  const data = {
+    archetype: document.getElementById('t-archetype').value,
+    atlas_size: parseInt(document.getElementById('t-atlas').value),
+    on_the_play: document.getElementById('t-playdraw').value === 'play',
+  };
+
+  const res = await fetch('/api/table', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  const table = await res.json();
+
+  const turns = Object.keys(table);
+  let html = '<thead><tr><th>Sources</th>';
+  for (const t of turns) {
+    for (let p = 1; p <= 4; p++) {
+      html += `<th>T${t}<br>${p}pip</th>`;
+    }
+  }
+  html += '</tr></thead><tbody>';
+
+  for (let s = 1; s <= 25; s++) {
+    html += `<tr><td><strong>${s}</strong></td>`;
+    for (const t of turns) {
+      for (let p = 1; p <= 4; p++) {
+        const entry = table[t][p];
+        const prob = entry ? entry.find(e => e[0] === s) : null;
+        const val = prob ? prob[1] : 0;
+        const pc = val >= 90 ? 'prob-ok' : val >= 80 ? 'prob-warn' : val > 0 ? 'prob-bad' : '';
+        html += `<td class="${pc}" style="font-size:0.75rem;">${val > 0 ? val + '%' : '-'}</td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  document.getElementById('ref-table').innerHTML = html;
+}
+
+// =====================================================================
+// Sample Hand Simulator
+// =====================================================================
+async function drawSampleHand() {
+  if (!loadedDeck) {
+    document.getElementById('samplehand-result').innerHTML = '<span style="color:var(--danger);">Load a deck first.</span>';
+    return;
+  }
+  const btn = document.getElementById('draw-hand-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Drawing...';
+
+  try {
+    const res = await fetch('/api/sample-hand', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ deck: loadedDeck })
+    });
+    const data = await res.json();
+
+    let html = '';
+    if (data.spells && data.spells.length) {
+      html += '<div class="hand-section"><div class="hand-section-label">Spells</div><div class="stat-pills">';
+      for (const card of data.spells) {
+        const label = typeof card === 'string' ? card : (card.name || card);
+        html += `<span class="pill" style="border:1px solid var(--accent);">${label}</span>`;
+      }
+      html += '</div></div>';
+    }
+    if (data.sites && data.sites.length) {
+      html += '<div class="hand-section"><div class="hand-section-label">Sites</div><div class="stat-pills">';
+      for (const card of data.sites) {
+        const label = typeof card === 'string' ? card : (card.name || card);
+        html += `<span class="pill" style="border:1px solid var(--gold);">${label}</span>`;
+      }
+      html += '</div></div>';
+    }
+    if (!html && data.hand) {
+      // Fallback: API returns a flat hand array
+      html += '<div class="hand-section"><div class="hand-section-label">Hand</div><div class="stat-pills">';
+      for (const card of data.hand) {
+        const label = typeof card === 'string' ? card : (card.name || card);
+        html += `<span class="pill" style="border:1px solid var(--accent);">${label}</span>`;
+      }
+      html += '</div></div>';
+    }
+    if (data.error) {
+      html = `<span style="color:var(--danger);">${data.error}</span>`;
+    }
+    document.getElementById('samplehand-result').innerHTML = html;
+  } catch (e) {
+    document.getElementById('samplehand-result').innerHTML = `<span style="color:var(--danger);">Error: ${e.message}</span>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Draw Hand';
+}
+</script>
+</body>
+</html>

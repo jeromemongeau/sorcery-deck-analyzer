@@ -1,0 +1,336 @@
+{
+  "_description": "Special cards that affect threshold calculations beyond what the JSON thresholds field shows. These cards provide threshold through abilities, not innate site icons.",
+
+  "sites": {
+    "Annual Fair": {
+      "provides": ["air", "earth", "fire", "water"],
+      "pips_each": 1,
+      "condition": "pay_mana",
+      "mana_cost": 1,
+      "note": "(1) -> Gain any element this turn. Full source but only for spells castable at +1 mana."
+    },
+    "Mirror Realm": {
+      "provides": "copy_nearby",
+      "pips_each": 0,
+      "condition": "copy",
+      "note": "Copies a nearby site. Cannot be first source. 1 multi-pip element = full, 2 = 0.5, 3-4 = 0.25."
+    },
+    "Valley of Delight": {
+      "provides": ["air", "earth", "fire", "water"],
+      "pips_each": 1,
+      "condition": "genesis_choose",
+      "note": "Genesis: permanently becomes one element. 2-color single-pip = full, multi-pip/3-4 color = 0.5."
+    },
+    "Floodplain": {
+      "provides": ["water"],
+      "pips_each": 1,
+      "condition": "flood",
+      "note": "Has 1 water pip innately. Can flood adjacent site for effectively 2 water. Count as 1.33 water for 2+ pip calcs."
+    },
+    "Mismanaged Mortuary": {
+      "provides": ["water"],
+      "pips_each": 1,
+      "condition": "innately_flooded",
+      "note": "Innately flooded (water site). JSON shows 0 threshold but being flooded means it provides water threshold."
+    },
+    "Algae Bloom": {
+      "provides": ["air", "earth", "fire"],
+      "pips_each": 1,
+      "condition": "genesis_temporary",
+      "note": "Has 1 water pip innately. Genesis: provides (A)(E)(F) this turn only. Partial source for non-water elements."
+    },
+    "Autumn Bloom": {
+      "provides": ["air", "fire", "water"],
+      "pips_each": 1,
+      "condition": "genesis_temporary",
+      "note": "Has 1 earth pip innately. Genesis: provides (A)(F)(W) this turn only. Partial source for non-earth elements."
+    },
+    "Desert Bloom": {
+      "provides": ["air", "earth", "water"],
+      "pips_each": 1,
+      "condition": "genesis_temporary",
+      "note": "Has 1 fire pip innately. Genesis: provides (A)(E)(W) this turn only. Partial source for non-fire elements."
+    },
+    "Twilight Bloom": {
+      "provides": ["earth", "fire", "water"],
+      "pips_each": 1,
+      "condition": "genesis_temporary",
+      "note": "Has 1 air pip innately. Genesis: provides (E)(F)(W) this turn only. Partial source for non-air elements."
+    },
+    "City of Glass": {
+      "provides": ["air"],
+      "pips_each": 1,
+      "condition": "conditional_threshold",
+      "note": "(A) threshold with 2 mana, but destroyed when damaged. Count as full air source."
+    },
+    "City of Plenty": {
+      "provides": ["water"],
+      "pips_each": 1,
+      "condition": "conditional_threshold",
+      "note": "(W) threshold with 2 mana, but also gives opponent 1 mana. Count as full water source."
+    },
+    "City of Souls": {
+      "provides": ["earth"],
+      "pips_each": 1,
+      "condition": "conditional_threshold",
+      "note": "(E) threshold with 2 mana, but enemies can redirect damage. Count as full earth source."
+    },
+    "City of Traitors": {
+      "provides": ["fire"],
+      "pips_each": 1,
+      "condition": "conditional_threshold",
+      "note": "(F) threshold with 2 mana, but opponent can cast stealthed minions here. Count as full fire source."
+    },
+    "The Empyrean": {
+      "provides": ["air", "earth", "fire", "water"],
+      "pips_each": 1,
+      "condition": "conditional_threshold",
+      "note": "Provides (A)(E)(F)(W) IF you control a nearby Angel or Ward. Conditional — count as 0.5 source each."
+    },
+    "Crossroads": {
+      "provides": [],
+      "condition": "scry_atlas",
+      "note": "Genesis: look at next 4 sites, keep 1, bottom 3. Improves atlas quality. Counts as ~0.5 extra look."
+    },
+    "Imperial Road": {
+      "provides": [],
+      "condition": "play_extra_site",
+      "note": "Genesis: opponent then you may play a site adjacent. Extra site = extra mana + threshold."
+    },
+    "Pristine Paradise": {
+      "provides": ["air", "earth", "fire", "water"],
+      "pips_each": 1,
+      "condition": "conditional_note",
+      "note": "Provides all 4 elements but ONLY if completely empty (no units). Already in JSON thresholds."
+    },
+    "The Colour Out of Space": {
+      "provides": ["air", "earth", "fire", "water"],
+      "pips_each": 1,
+      "condition": "conditional_note",
+      "note": "Provides all 4 elements but ONLY if adjacent to the void. Already in JSON thresholds."
+    },
+    "Pond": {
+      "provides": [],
+      "condition": "ignore_threshold",
+      "note": "Genesis: next Beast cast here costs (1) less, ignoring threshold."
+    },
+    "Tournament Grounds": {
+      "provides": [],
+      "condition": "ignore_threshold",
+      "note": "Knights/Sirs/Dames cast here require no threshold."
+    },
+    "Dragonlord's Lair": {
+      "provides": [],
+      "condition": "ignore_threshold",
+      "note": "Dragons cast here require no threshold and cost (1) less."
+    },
+    "Den of Evil": {
+      "provides": [],
+      "condition": "ignore_threshold",
+      "note": "Genesis: next Evil cast here costs (1) less, ignoring threshold."
+    }
+  },
+
+  "avatars": {
+    "Elementalist": {
+      "provides": ["air", "earth", "fire", "water"],
+      "pips_each": 1,
+      "condition": "always",
+      "note": "Always has +1 of each element. Reduces all threshold requirements by 1 pip."
+    },
+    "Pathfinder": {
+      "provides": [],
+      "condition": "archetype_override",
+      "note": "Forces Pathfinder archetype. No opening hand sites, plays top site each turn. No duplicates."
+    },
+    "Seer": {
+      "provides": [],
+      "condition": "scry",
+      "note": "Scry top site/spell each turn. Counts as +0.5 atlas looks per turn."
+    },
+    "Avatar of Water": {
+      "provides": [],
+      "condition": "flood_ability",
+      "note": "Can flood a site adjacent to body of water each turn. Flooded sites become water threshold sources."
+    },
+    "Waveshaper": {
+      "provides": [],
+      "condition": "flood_ability",
+      "note": "Can flood a site near body of water each turn. Flooded sites become water threshold sources."
+    },
+    "Geomancer": {
+      "provides": [],
+      "condition": "play_extra_site",
+      "note": "Second tap ability plays topmost site from atlas to replace Rubble. Extra site = extra threshold source."
+    }
+  },
+
+  "spellbook_sources": {
+    "Ruby Core": {
+      "provides": ["fire"],
+      "pips_each": 1,
+      "condition": "in_play",
+      "note": "Artifact: provides (F) and 1 mana. Fractional: 1=0.15, 2=0.20, 3=0.33, 4-5=0.50."
+    },
+    "Onyx Core": {
+      "provides": ["earth"],
+      "pips_each": 1,
+      "condition": "in_play",
+      "note": "Artifact: provides (E) and 1 mana. Fractional: 1=0.15, 2=0.20, 3=0.33, 4-5=0.50."
+    },
+    "Aquamarine Core": {
+      "provides": ["water"],
+      "pips_each": 1,
+      "condition": "in_play",
+      "note": "Artifact: provides (W) and 1 mana. Fractional: 1=0.15, 2=0.20, 3=0.33, 4-5=0.50."
+    },
+    "Amethyst Core": {
+      "provides": ["air"],
+      "pips_each": 1,
+      "condition": "in_play",
+      "note": "Artifact: provides (A) and 1 mana. Fractional: 1=0.15, 2=0.20, 3=0.33, 4-5=0.50."
+    },
+    "Blacksmith Family": {
+      "provides": ["fire"],
+      "pips_each": 1,
+      "condition": "in_play",
+      "note": "Minion: provides (F). Fractional same as Cores."
+    },
+    "Castle Servants": {
+      "provides": ["air"],
+      "pips_each": 1,
+      "condition": "in_play",
+      "note": "Minion: provides (A). Fractional same as Cores."
+    },
+    "Common Cottagers": {
+      "provides": ["earth"],
+      "pips_each": 1,
+      "condition": "in_play",
+      "note": "Minion: provides (E). Fractional same as Cores."
+    },
+    "Fisherman's Family": {
+      "provides": ["water"],
+      "pips_each": 1,
+      "condition": "in_play",
+      "note": "Minion: provides (W). Fractional same as Cores."
+    },
+    "Shrine of the Dragonlord": {
+      "provides": ["air", "earth", "fire", "water"],
+      "pips_each": 1,
+      "condition": "in_play",
+      "note": "Artifact: provides (A)(E)(F)(W) and 1 extra mana. Fractional same as Cores, but for ALL elements."
+    },
+    "Land Surveyor": {
+      "provides": [],
+      "condition": "draw_site",
+      "note": "Genesis: draw a site. Extra atlas look: 1=negligible, 2=0.20, 3=0.33, 4-7=0.50."
+    },
+    "Kettletop Leprechaun": {
+      "provides": [],
+      "condition": "draw_site_deathrite",
+      "note": "Deathrite: draw a site. Less reliable than genesis. 1=negligible, 2-3=0.15, 4=0.25."
+    },
+    "Frontier Settlers": {
+      "provides": [],
+      "condition": "play_top_site",
+      "note": "Tap: play topmost site to adjacent void. One-time use. Counts as ~0.25 extra look."
+    },
+    "Landmass": {
+      "provides": [],
+      "condition": "draw_and_play_site",
+      "note": "Magic: draw a site, may play a land site. Counts as ~0.15 extra look per copy."
+    },
+    "Overflow": {
+      "provides": [],
+      "condition": "draw_and_play_site",
+      "note": "Magic: draw a site, may play a water site. Counts as ~0.15 extra look per copy."
+    },
+    "Sow the Earth": {
+      "provides": [],
+      "condition": "play_top_site",
+      "note": "Aura: plays top site to a void. That site provides DOUBLE mana and threshold. Counts as ~0.25 extra look."
+    },
+    "Clay Golem": {
+      "provides": [],
+      "condition": "play_top_site_deathrite",
+      "note": "Artifact: deathrite plays top site. Less reliable. Counts as ~0.10 extra look per copy."
+    },
+    "Tide Naiads": {
+      "provides": ["water"],
+      "pips_each": 1,
+      "condition": "flood_site",
+      "note": "Minion: its site is flooded (becomes water site). Adds water threshold where placed."
+    },
+    "Great Old One": {
+      "provides": ["water"],
+      "pips_each": 1,
+      "condition": "flood_all",
+      "note": "Minion: genesis permanently floods the entire realm. All sites become water sources."
+    },
+    "Mix Aer": {
+      "provides": ["air"],
+      "condition": "ignore_threshold",
+      "note": "Artifact: sacrifice -> next Air spell requires no threshold and costs (2) less."
+    },
+    "Mix Aqua": {
+      "provides": ["water"],
+      "condition": "ignore_threshold",
+      "note": "Artifact: sacrifice -> next Water spell requires no threshold and costs (2) less."
+    },
+    "Mix Ignis": {
+      "provides": ["fire"],
+      "condition": "ignore_threshold",
+      "note": "Artifact: sacrifice -> next Fire spell requires no threshold and costs (2) less."
+    },
+    "Mix Terra": {
+      "provides": ["earth"],
+      "condition": "ignore_threshold",
+      "note": "Artifact: sacrifice -> next Earth spell requires no threshold and costs (2) less."
+    },
+    "Four Waters of Paradise": {
+      "provides": ["air", "earth", "fire", "water"],
+      "condition": "ignore_threshold",
+      "note": "Artifact: sacrifice -> next elemental spell requires no threshold and costs (4) less."
+    },
+    "Captain Baldassare": {
+      "provides": [],
+      "condition": "ignore_threshold",
+      "note": "Minion: cast opponent's discarded spells ignoring threshold."
+    },
+    "Sea Raider": {
+      "provides": [],
+      "condition": "ignore_threshold",
+      "note": "Minion: cast killed enemy's top spell ignoring threshold."
+    },
+    "De Vermis Mysteriis": {
+      "provides": [],
+      "condition": "ignore_threshold",
+      "note": "Artifact: bearer may cast minions for (5), ignoring threshold."
+    },
+    "Wiccan Tools": {
+      "provides": [],
+      "condition": "ignore_threshold",
+      "note": "Artifact: sacrifice -> draw a spell, bearer's spells require no threshold this turn."
+    },
+    "Drought": {
+      "provides": [],
+      "condition": "remove_threshold",
+      "note": "Aura: affected sites provide no water threshold. Counters water decks."
+    },
+    "Sinterfee": {
+      "provides": [],
+      "condition": "remove_threshold",
+      "note": "Minion: genesis silences adjacent site, it provides no threshold while Sinterfee is in realm."
+    },
+    "Atlantean Fate": {
+      "provides": ["water"],
+      "condition": "flood_aura",
+      "note": "Aura: affected non-Ordinary sites are flooded (water sites, only water threshold, lose other abilities)."
+    },
+    "Flood": {
+      "provides": ["water"],
+      "condition": "flood_aura",
+      "note": "Aura: affected sites are flooded (become water sites)."
+    }
+  }
+}
