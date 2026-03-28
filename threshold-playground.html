@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sorcery Threshold Calculator — How It Works</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242835;
+    --border: #2e3345;
+    --text: #e2e4eb;
+    --text-dim: #8b90a5;
+    --fire: #e8553a;
+    --fire-dim: #e8553a55;
+    --water: #3a8ee8;
+    --water-dim: #3a8ee855;
+    --earth: #4ab847;
+    --earth-dim: #4ab84755;
+    --air: #b07ee8;
+    --air-dim: #b07ee855;
+    --green: #4ab847;
+    --yellow: #e8b83a;
+    --red: #e8553a;
+    --accent: var(--fire);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    min-height: 100vh;
+  }
+
+  /* --- Controls Panel --- */
+  .controls {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .controls h1 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .controls h1 span {
+    color: var(--text-dim);
+    font-weight: 400;
+    font-size: 12px;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .group-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  .control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .control label {
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .control label .val {
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 600;
+    min-width: 28px;
+    text-align: right;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface2);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+
+  .element-picker {
+    display: flex;
+    gap: 6px;
+  }
+
+  .element-btn {
+    flex: 1;
+    padding: 6px 0;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .element-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  .element-btn[data-el="fire"] { --accent: var(--fire); }
+  .element-btn[data-el="water"] { --accent: var(--water); }
+  .element-btn[data-el="earth"] { --accent: var(--earth); }
+  .element-btn[data-el="air"] { --accent: var(--air); }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .toggle {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+  }
+
+  .toggle.on {
+    background: var(--water);
+    border-color: var(--water);
+  }
+
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.2s;
+  }
+
+  .toggle.on::after {
+    transform: translateX(16px);
+  }
+
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .preset-btn {
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .preset-btn:hover {
+    border-color: var(--text-dim);
+    color: var(--text);
+  }
+
+  /* --- Main Panel --- */
+  .main {
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* Result banner */
+  .result-banner {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 24px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .result-pct {
+    font-size: 48px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    line-height: 1;
+  }
+
+  .result-pct.green { color: var(--green); }
+  .result-pct.yellow { color: var(--yellow); }
+  .result-pct.red { color: var(--red); }
+
+  .result-desc {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    flex: 1;
+  }
+
+  .result-desc strong {
+    color: var(--text);
+  }
+
+  .result-badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+
+  .result-badge.green { background: #4ab84722; color: var(--green); }
+  .result-badge.yellow { background: #e8b83a22; color: var(--yellow); }
+  .result-badge.red { background: #e8553a22; color: var(--red); }
+
+  /* Two-column content */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title .icon {
+    font-size: 16px;
+  }
+
+  /* Urn model */
+  .urn-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .urn-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  .urn-pool {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .urn-ball {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+  }
+
+  .urn-ball.source {
+    background: var(--accent);
+    color: white;
+    border-color: color-mix(in srgb, var(--accent) 70%, white);
+  }
+
+  .urn-ball.source2 {
+    background: var(--water);
+    color: white;
+    border-color: color-mix(in srgb, var(--water) 70%, white);
+  }
+
+  .urn-ball.blank {
+    background: var(--surface2);
+    color: var(--text-dim);
+    border-color: var(--border);
+  }
+
+  .urn-ball.drawn {
+    opacity: 1;
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--yellow);
+  }
+
+  .urn-arrow {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 20px;
+  }
+
+  .urn-hand {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-height: 34px;
+    padding: 8px;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
+
+  /* Chart */
+  .chart-container {
+    position: relative;
+    height: 260px;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Formula breakdown */
+  .formula-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .formula-box {
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 14px;
+    padding: 16px;
+    background: var(--bg);
+    border-radius: 8px;
+    margin: 12px 0;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+
+  .formula-box .var-n { color: var(--air); }
+  .formula-box .var-k { color: var(--fire); }
+  .formula-box .var-big-n { color: var(--earth); }
+  .formula-box .var-big-k { color: var(--water); }
+
+  .formula-vars {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .formula-var {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-radius: 6px;
+  }
+
+  .formula-var .sym {
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    font-weight: 700;
+    font-size: 16px;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .formula-var .desc {
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  .formula-var .desc strong {
+    color: var(--text);
+  }
+
+  /* Steps */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .step {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step strong { color: var(--text); }
+  .step code {
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    background: var(--bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  /* Combined section */
+  .combined-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .combined-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .combined-chip {
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .combined-op {
+    color: var(--text-dim);
+    font-size: 18px;
+  }
+
+  .hidden { display: none !important; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <h1>Threshold Calculator <span>How Sorcery probabilities work</span></h1>
+
+    <div class="group">
+      <div class="group-title">Presets</div>
+      <div class="presets">
+        <button class="preset-btn" onclick="applyPreset('aggro')">Aggro T2</button>
+        <button class="preset-btn" onclick="applyPreset('midrange')">Midrange T3</button>
+        <button class="preset-btn" onclick="applyPreset('splash')">Light Splash</button>
+        <button class="preset-btn" onclick="applyPreset('heavy')">Heavy Multi</button>
+        <button class="preset-btn" onclick="applyPreset('doublepip')">Double Pip</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Primary Element</div>
+      <div class="element-picker" id="elPicker1">
+        <button class="element-btn active" data-el="fire" onclick="setElement(1,'fire')">Fire</button>
+        <button class="element-btn" data-el="water" onclick="setElement(1,'water')">Water</button>
+        <button class="element-btn" data-el="earth" onclick="setElement(1,'earth')">Earth</button>
+        <button class="element-btn" data-el="air" onclick="setElement(1,'air')">Air</button>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Atlas (Site Deck)</div>
+      <div class="control">
+        <label>Atlas Size <span class="val" id="vAtlas">15</span></label>
+        <input type="range" id="sAtlas" min="8" max="25" value="15" oninput="onSlider()">
+      </div>
+      <div class="control">
+        <label>Element Sources (pips) <span class="val" id="vSources">6</span></label>
+        <input type="range" id="sSources" min="0" max="20" value="6" oninput="onSlider()">
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Spell Requirement</div>
+      <div class="control">
+        <label>Pips Needed <span class="val" id="vPips">1</span></label>
+        <input type="range" id="sPips" min="1" max="3" value="1" oninput="onSlider()">
+      </div>
+      <div class="control">
+        <label>Sites Seen (by turn) <span class="val" id="vSeen">5</span></label>
+        <input type="range" id="sSeen" min="1" max="20" value="5" oninput="onSlider()">
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-title">Multi-Element Spell</div>
+      <div class="toggle-row">
+        Add second element
+        <div class="toggle" id="tDual" onclick="toggleDual()"></div>
+      </div>
+      <div id="dualControls" class="hidden">
+        <div class="element-picker" id="elPicker2" style="margin-bottom:10px">
+          <button class="element-btn" data-el="fire" onclick="setElement(2,'fire')">Fire</button>
+          <button class="element-btn active" data-el="water" onclick="setElement(2,'water')">Water</button>
+          <button class="element-btn" data-el="earth" onclick="setElement(2,'earth')">Earth</button>
+          <button class="element-btn" data-el="air" onclick="setElement(2,'air')">Air</button>
+        </div>
+        <div class="control">
+          <label>Sources (2nd) <span class="val" id="vSources2">4</span></label>
+          <input type="range" id="sSources2" min="0" max="20" value="4" oninput="onSlider()">
+        </div>
+        <div class="control">
+          <label>Pips Needed (2nd) <span class="val" id="vPips2">1</span></label>
+          <input type="range" id="sPips2" min="1" max="3" value="1" oninput="onSlider()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- Result Banner -->
+    <div class="result-banner">
+      <div class="result-pct green" id="resultPct">94.2%</div>
+      <div class="result-desc" id="resultDesc"></div>
+      <div class="result-badge green" id="resultBadge">Reliable</div>
+    </div>
+
+    <!-- Urn + Chart -->
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-title"><span class="icon">&#x1F3B2;</span> The Urn Model</div>
+        <div class="urn-visual">
+          <div class="urn-label">Your Atlas (N sites)</div>
+          <div class="urn-pool" id="urnPool"></div>
+          <div class="urn-arrow">&#8595; draw <span id="urnDrawCount">5</span> sites</div>
+          <div class="urn-label">Sites Seen This Game</div>
+          <div class="urn-hand" id="urnHand"></div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:4px" id="urnExplain"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><span class="icon">&#x1F4C8;</span> Probability Curve</div>
+        <div class="chart-container">
+          <canvas id="chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formula Breakdown -->
+    <div class="formula-section">
+      <div class="panel-title"><span class="icon">&#x1F9EE;</span> How It's Calculated</div>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:8px">
+        The calculator uses the <strong style="color:var(--text)">hypergeometric distribution</strong> — the same math as drawing colored balls from an urn without replacement.
+      </p>
+      <div class="formula-box">
+        P(X &ge; <span class="var-k">k</span>) = 1 &minus; &sum;<sub>i=0</sub><sup><span class="var-k">k</span>-1</sup>
+        C(<span class="var-big-k">K</span>, i) &times; C(<span class="var-big-n">N</span> &minus; <span class="var-big-k">K</span>, <span class="var-n">n</span> &minus; i)
+        &frasl; C(<span class="var-big-n">N</span>, <span class="var-n">n</span>)
+      </div>
+      <div class="formula-vars">
+        <div class="formula-var">
+          <span class="sym var-big-n">N</span>
+          <div class="desc"><strong id="fN">15</strong> — atlas size (total sites)</div>
+        </div>
+        <div class="formula-var">
+          <span class="sym var-big-k">K</span>
+          <div class="desc"><strong id="fK">6</strong> — sources of element</div>
+        </div>
+        <div class="formula-var">
+          <span class="sym var-n">n</span>
+          <div class="desc"><strong id="fn">5</strong> — sites seen by this turn</div>
+        </div>
+        <div class="formula-var">
+          <span class="sym var-k">k</span>
+          <div class="desc"><strong id="fk">1</strong> — pips needed</div>
+        </div>
+      </div>
+
+      <div class="steps" id="stepsContainer"></div>
+    </div>
+
+    <!-- Combined (dual element) -->
+    <div class="combined-section" id="combinedSection">
+      <div class="panel-title"><span class="icon">&#x2728;</span> Combined Probability (Multi-Element)</div>
+      <p style="font-size:13px;color:var(--text-dim)">
+        For spells requiring <strong style="color:var(--text)">two elements</strong>, the probabilities multiply — you need <em>both</em> to be met independently.
+      </p>
+      <div class="combined-row" id="combinedRow"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ELEMENTS = {
+  fire:  { color: '#e8553a', label: 'Fire',  sym: 'F' },
+  water: { color: '#3a8ee8', label: 'Water', sym: 'W' },
+  earth: { color: '#4ab847', label: 'Earth', sym: 'E' },
+  air:   { color: '#b07ee8', label: 'Air',   sym: 'A' },
+};
+
+const DEFAULTS = { atlas: 15, sources: 6, pips: 1, seen: 5, el1: 'fire', dual: false, el2: 'water', sources2: 4, pips2: 1 };
+
+const state = { ...DEFAULTS };
+
+const PRESETS = {
+  aggro:     { atlas: 12, sources: 7, pips: 1, seen: 4, el1: 'fire', dual: false, sources2: 4, pips2: 1 },
+  midrange:  { atlas: 15, sources: 8, pips: 1, seen: 6, el1: 'earth', dual: false, sources2: 4, pips2: 1 },
+  splash:    { atlas: 15, sources: 10, pips: 1, seen: 5, el1: 'fire', dual: true, el2: 'water', sources2: 3, pips2: 1 },
+  heavy:     { atlas: 16, sources: 7, pips: 2, seen: 7, el1: 'fire', dual: true, el2: 'water', sources2: 6, pips2: 2 },
+  doublepip: { atlas: 15, sources: 10, pips: 2, seen: 5, el1: 'water', dual: false, sources2: 4, pips2: 1 },
+};
+
+// --- Math ---
+function logChoose(n, k) {
+  if (k < 0 || k > n) return -Infinity;
+  if (k === 0 || k === n) return 0;
+  if (k > n - k) k = n - k;
+  let s = 0;
+  for (let i = 0; i < k; i++) s += Math.log(n - i) - Math.log(i + 1);
+  return s;
+}
+
+function hypergeomPmf(x, N, K, n) {
+  if (x < Math.max(0, n + K - N) || x > Math.min(K, n)) return 0;
+  return Math.exp(logChoose(K, x) + logChoose(N - K, n - x) - logChoose(N, n));
+}
+
+function hypergeomCdf(k, N, K, n) {
+  let s = 0;
+  for (let i = 0; i <= k; i++) s += hypergeomPmf(i, N, K, n);
+  return Math.min(1, s);
+}
+
+function thresholdProb(N, K, n, k) {
+  if (k <= 0) return 1;
+  n = Math.min(n, N);
+  K = Math.min(K, N);
+  if (K < k) return 1 - hypergeomCdf(K, N, K, n); // can never fully meet if K < k
+  return 1 - hypergeomCdf(k - 1, N, K, n);
+}
+
+// --- UI Sync ---
+function onSlider() {
+  state.atlas = +document.getElementById('sAtlas').value;
+  state.sources = +document.getElementById('sSources').value;
+  state.pips = +document.getElementById('sPips').value;
+  state.seen = +document.getElementById('sSeen').value;
+  state.sources2 = +document.getElementById('sSources2').value;
+  state.pips2 = +document.getElementById('sPips2').value;
+
+  // Clamp sources to atlas
+  if (state.sources > state.atlas) { state.sources = state.atlas; document.getElementById('sSources').value = state.sources; }
+  if (state.sources2 > state.atlas) { state.sources2 = state.atlas; document.getElementById('sSources2').value = state.sources2; }
+  // Clamp seen to atlas
+  if (state.seen > state.atlas) { state.seen = state.atlas; document.getElementById('sSeen').value = state.seen; }
+
+  document.getElementById('vAtlas').textContent = state.atlas;
+  document.getElementById('vSources').textContent = state.sources;
+  document.getElementById('vPips').textContent = state.pips;
+  document.getElementById('vSeen').textContent = state.seen;
+  document.getElementById('vSources2').textContent = state.sources2;
+  document.getElementById('vPips2').textContent = state.pips2;
+
+  // Update max on sources slider
+  document.getElementById('sSources').max = state.atlas;
+  document.getElementById('sSources2').max = state.atlas;
+  document.getElementById('sSeen').max = state.atlas;
+
+  updateAll();
+}
+
+function setElement(picker, el) {
+  if (picker === 1) state.el1 = el;
+  else state.el2 = el;
+  const container = document.getElementById(picker === 1 ? 'elPicker1' : 'elPicker2');
+  container.querySelectorAll('.element-btn').forEach(b => b.classList.toggle('active', b.dataset.el === el));
+  document.documentElement.style.setProperty('--accent', ELEMENTS[state.el1].color);
+  updateAll();
+}
+
+function toggleDual() {
+  state.dual = !state.dual;
+  document.getElementById('tDual').classList.toggle('on', state.dual);
+  document.getElementById('dualControls').classList.toggle('hidden', !state.dual);
+  document.getElementById('combinedSection').classList.toggle('hidden', !state.dual);
+  updateAll();
+}
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  Object.assign(state, p);
+  document.getElementById('sAtlas').value = state.atlas;
+  document.getElementById('sSources').value = state.sources;
+  document.getElementById('sPips').value = state.pips;
+  document.getElementById('sSeen').value = state.seen;
+  document.getElementById('sSources2').value = state.sources2;
+  document.getElementById('sPips2').value = state.pips2;
+  setElement(1, state.el1);
+  if (state.el2) setElement(2, state.el2);
+  if (state.dual !== document.getElementById('tDual').classList.contains('on')) toggleDual();
+  onSlider();
+}
+
+// --- Render ---
+function updateAll() {
+  const prob1 = thresholdProb(state.atlas, state.sources, state.seen, state.pips);
+  const prob2 = state.dual ? thresholdProb(state.atlas, state.sources2, state.seen, state.pips2) : 1;
+  const combined = prob1 * prob2;
+  const displayProb = state.dual ? combined : prob1;
+  const pct = (displayProb * 100).toFixed(1);
+
+  // Result banner
+  const cls = displayProb >= 0.9 ? 'green' : displayProb >= 0.7 ? 'yellow' : 'red';
+  const badge = displayProb >= 0.9 ? 'Reliable' : displayProb >= 0.7 ? 'Risky' : 'Unlikely';
+  document.getElementById('resultPct').textContent = pct + '%';
+  document.getElementById('resultPct').className = 'result-pct ' + cls;
+  document.getElementById('resultBadge').textContent = badge;
+  document.getElementById('resultBadge').className = 'result-badge ' + cls;
+
+  const el1 = ELEMENTS[state.el1];
+  let desc = `You have <strong>${state.sources} ${el1.label}</strong> sources in a <strong>${state.atlas}-card</strong> atlas. `;
+  desc += `After seeing <strong>${state.seen}</strong> sites, the chance of hitting <strong>${state.pips}+ ${el1.label} pip${state.pips > 1 ? 's' : ''}</strong> is <strong>${(prob1 * 100).toFixed(1)}%</strong>.`;
+  if (state.dual) {
+    const el2 = ELEMENTS[state.el2];
+    desc += `<br>For <strong>${el2.label}</strong>: ${state.sources2} sources, ${state.pips2} pip${state.pips2 > 1 ? 's' : ''} needed = <strong>${(prob2 * 100).toFixed(1)}%</strong>.`;
+    desc += `<br>Combined: <strong>${pct}%</strong>.`;
+  }
+  document.getElementById('resultDesc').innerHTML = desc;
+
+  // Formula vars
+  document.getElementById('fN').textContent = state.atlas;
+  document.getElementById('fK').textContent = state.sources;
+  document.getElementById('fn').textContent = state.seen;
+  document.getElementById('fk').textContent = state.pips;
+
+  renderUrn();
+  renderChart();
+  renderSteps(prob1);
+  renderCombined(prob1, prob2);
+}
+
+function renderUrn() {
+  const pool = document.getElementById('urnPool');
+  const hand = document.getElementById('urnHand');
+  pool.innerHTML = '';
+  hand.innerHTML = '';
+
+  const el1 = ELEMENTS[state.el1];
+  const el2 = state.dual ? ELEMENTS[state.el2] : null;
+
+  // Build atlas representation
+  // Sources for el1, sources for el2 (if dual and different), blanks
+  let balls = [];
+  const s1 = state.sources;
+  const s2 = state.dual ? state.sources2 : 0;
+
+  // For simplicity: if dual and same element, combine. Otherwise separate.
+  if (state.dual && state.el1 === state.el2) {
+    for (let i = 0; i < Math.min(Math.max(s1, s2), state.atlas); i++) balls.push('source');
+    for (let i = balls.length; i < state.atlas; i++) balls.push('blank');
+  } else {
+    // Some sites might overlap (provide both). For visual simplicity, show separately.
+    for (let i = 0; i < Math.min(s1, state.atlas); i++) balls.push('source');
+    for (let i = 0; i < Math.min(s2, state.atlas - s1); i++) balls.push('source2');
+    for (let i = balls.length; i < state.atlas; i++) balls.push('blank');
+  }
+
+  // Deterministic "draw" for visualization (pick first n items shuffled by seed)
+  const seen = Math.min(state.seen, state.atlas);
+  // Use a simple spread: pick proportionally
+  const drawnIndices = new Set();
+  for (let i = 0; i < seen; i++) {
+    const idx = Math.floor(i * state.atlas / seen);
+    drawnIndices.add(idx);
+  }
+  // Fill remaining if needed
+  for (let i = 0; drawnIndices.size < seen && i < state.atlas; i++) {
+    drawnIndices.add(i);
+  }
+
+  balls.forEach((type, i) => {
+    const b = document.createElement('div');
+    b.className = 'urn-ball ' + type;
+    if (drawnIndices.has(i)) b.classList.add('drawn');
+    const sym = type === 'source' ? el1.sym : type === 'source2' ? el2.sym : '';
+    b.textContent = sym;
+    if (type === 'source') {
+      b.style.background = el1.color;
+      b.style.borderColor = el1.color + 'aa';
+    } else if (type === 'source2' && el2) {
+      b.style.background = el2.color;
+      b.style.borderColor = el2.color + 'aa';
+    }
+    pool.appendChild(b);
+  });
+
+  document.getElementById('urnDrawCount').textContent = seen;
+
+  // Hand
+  let handSources = 0;
+  let handSources2 = 0;
+  balls.forEach((type, i) => {
+    if (!drawnIndices.has(i)) return;
+    const b = document.createElement('div');
+    b.className = 'urn-ball ' + type;
+    const sym = type === 'source' ? el1.sym : type === 'source2' ? el2.sym : '';
+    b.textContent = sym;
+    if (type === 'source') {
+      b.style.background = el1.color;
+      b.style.borderColor = el1.color + 'aa';
+      handSources++;
+    } else if (type === 'source2' && el2) {
+      b.style.background = el2.color;
+      b.style.borderColor = el2.color + 'aa';
+      handSources2++;
+    }
+    hand.appendChild(b);
+  });
+
+  const met1 = handSources >= state.pips;
+  const met2 = !state.dual || handSources2 >= state.pips2;
+  let explain = `This draw: ${handSources} ${el1.sym} source${handSources !== 1 ? 's' : ''} found`;
+  if (state.dual && el2) explain += `, ${handSources2} ${el2.sym}`;
+  explain += ` — threshold ${met1 && met2 ? 'MET' : 'NOT met'}`;
+  document.getElementById('urnExplain').textContent = explain;
+}
+
+function renderChart() {
+  const canvas = document.getElementById('chart');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.parentElement.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { top: 20, right: 20, bottom: 36, left: 46 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+
+  const maxX = state.atlas;
+
+  // Grid
+  ctx.strokeStyle = '#2e3345';
+  ctx.lineWidth = 1;
+  for (let y = 0; y <= 100; y += 25) {
+    const py = pad.top + ch - (y / 100) * ch;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, py);
+    ctx.lineTo(pad.left + cw, py);
+    ctx.stroke();
+  }
+
+  // 90% target line
+  const y90 = pad.top + ch - 0.9 * ch;
+  ctx.strokeStyle = '#4ab84744';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(pad.left, y90);
+  ctx.lineTo(pad.left + cw, y90);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#4ab84788';
+  ctx.font = '10px system-ui';
+  ctx.fillText('90% target', pad.left + 4, y90 - 4);
+
+  // Curve — primary
+  const el1 = ELEMENTS[state.el1];
+  ctx.strokeStyle = el1.color;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  const points1 = [];
+  for (let n = 1; n <= maxX; n++) {
+    const p = thresholdProb(state.atlas, state.sources, n, state.pips);
+    const px = pad.left + ((n - 1) / (maxX - 1)) * cw;
+    const py = pad.top + ch - p * ch;
+    points1.push({ x: px, y: py, p });
+    if (n === 1) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+
+  // Curve — secondary
+  if (state.dual) {
+    const el2 = ELEMENTS[state.el2];
+    ctx.strokeStyle = el2.color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    for (let n = 1; n <= maxX; n++) {
+      const p = thresholdProb(state.atlas, state.sources2, n, state.pips2);
+      const px = pad.left + ((n - 1) / (maxX - 1)) * cw;
+      const py = pad.top + ch - p * ch;
+      if (n === 1) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Combined curve
+    ctx.strokeStyle = '#e8b83a';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    for (let n = 1; n <= maxX; n++) {
+      const p1 = thresholdProb(state.atlas, state.sources, n, state.pips);
+      const p2 = thresholdProb(state.atlas, state.sources2, n, state.pips2);
+      const p = p1 * p2;
+      const px = pad.left + ((n - 1) / (maxX - 1)) * cw;
+      const py = pad.top + ch - p * ch;
+      if (n === 1) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Current point marker
+  const seenIdx = Math.min(state.seen, maxX) - 1;
+  if (seenIdx >= 0 && seenIdx < points1.length) {
+    const pt = points1[seenIdx];
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = el1.color;
+    ctx.fill();
+    ctx.strokeStyle = '#0f1117';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Vertical dashed line
+    ctx.strokeStyle = el1.color + '44';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(pt.x, pt.y);
+    ctx.lineTo(pt.x, pad.top + ch);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Axes labels
+  ctx.fillStyle = '#8b90a5';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'center';
+  for (let n = 1; n <= maxX; n += Math.max(1, Math.floor(maxX / 8))) {
+    const px = pad.left + ((n - 1) / (maxX - 1)) * cw;
+    ctx.fillText(n, px, pad.top + ch + 16);
+  }
+  ctx.fillText('Sites Seen', pad.left + cw / 2, pad.top + ch + 32);
+
+  ctx.textAlign = 'right';
+  for (let y = 0; y <= 100; y += 25) {
+    const py = pad.top + ch - (y / 100) * ch;
+    ctx.fillText(y + '%', pad.left - 6, py + 4);
+  }
+
+  // Legend
+  ctx.textAlign = 'left';
+  let lx = pad.left + cw - 120;
+  let ly = pad.top + 14;
+  ctx.fillStyle = el1.color;
+  ctx.fillRect(lx, ly - 6, 12, 3);
+  ctx.fillStyle = '#e2e4eb';
+  ctx.font = '10px system-ui';
+  ctx.fillText(el1.label, lx + 16, ly);
+  if (state.dual) {
+    ly += 14;
+    const el2 = ELEMENTS[state.el2];
+    ctx.fillStyle = el2.color;
+    ctx.fillRect(lx, ly - 6, 12, 3);
+    ctx.fillStyle = '#e2e4eb';
+    ctx.fillText(el2.label, lx + 16, ly);
+    ly += 14;
+    ctx.fillStyle = '#e8b83a';
+    ctx.fillRect(lx, ly - 6, 12, 3);
+    ctx.fillStyle = '#e2e4eb';
+    ctx.fillText('Combined', lx + 16, ly);
+  }
+}
+
+function renderSteps(prob1) {
+  const el1 = ELEMENTS[state.el1];
+  const container = document.getElementById('stepsContainer');
+
+  const N = state.atlas, K = state.sources, n = state.seen, k = state.pips;
+  const blanks = N - K;
+
+  const steps = [
+    `Your atlas has <strong>${N}</strong> total sites. Of these, <strong>${K}</strong> provide <strong style="color:${el1.color}">${el1.label}</strong> pips and <strong>${blanks}</strong> don't.`,
+    `By this point in the game, you've seen <strong>${n}</strong> sites from your atlas (opening hand + draws).`,
+    `Your spell requires <strong>${k}</strong> ${el1.label} pip${k > 1 ? 's' : ''}. We need at least <strong>${k}</strong> of your ${n} drawn sites to be ${el1.label} sources.`,
+    `The hypergeometric formula counts every possible combination of drawing ${n} from ${N} sites, and checks how many of those combinations include ${k}+ ${el1.label} sources.`,
+    `Result: <strong style="color:${prob1 >= 0.9 ? 'var(--green)' : prob1 >= 0.7 ? 'var(--yellow)' : 'var(--red)' }">${(prob1 * 100).toFixed(1)}%</strong> chance of meeting threshold. ${prob1 >= 0.9 ? 'This is reliable (90%+ target).' : prob1 >= 0.7 ? 'This is risky — consider adding more sources.' : 'This is unlikely — you need more sources of this element.'}`,
+  ];
+
+  container.innerHTML = steps.map((s, i) =>
+    `<div class="step"><div class="step-num">${i + 1}</div><div>${s}</div></div>`
+  ).join('');
+}
+
+function renderCombined(p1, p2) {
+  if (!state.dual) return;
+  const el1 = ELEMENTS[state.el1];
+  const el2 = ELEMENTS[state.el2];
+  const combined = p1 * p2;
+  const cls = combined >= 0.9 ? 'green' : combined >= 0.7 ? 'yellow' : 'red';
+
+  document.getElementById('combinedRow').innerHTML = `
+    <span class="combined-chip" style="background:${el1.color}22;color:${el1.color}">${el1.label} ${(p1*100).toFixed(1)}%</span>
+    <span class="combined-op">&times;</span>
+    <span class="combined-chip" style="background:${el2.color}22;color:${el2.color}">${el2.label} ${(p2*100).toFixed(1)}%</span>
+    <span class="combined-op">=</span>
+    <span class="combined-chip ${cls}" style="font-size:16px">${(combined*100).toFixed(1)}%</span>
+  `;
+}
+
+// Init
+document.documentElement.style.setProperty('--accent', ELEMENTS[state.el1].color);
+document.getElementById('combinedSection').classList.add('hidden');
+onSlider();
+
+// Resize chart on window resize
+window.addEventListener('resize', () => renderChart());
+</script>
+</body>
+</html>

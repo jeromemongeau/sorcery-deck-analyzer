@@ -136,14 +136,11 @@ textarea::placeholder { color: var(--text2); opacity: 0.6; }
   padding: 0.3rem 0;
 }
 .elem-pip {
-  width: 18px; height: 18px; border-radius: 50%; display: inline-flex;
-  align-items: center; justify-content: center; font-size: 0.65rem;
-  font-weight: 700; color: white;
+  width: 18px; height: 18px; display: inline-block; vertical-align: middle;
 }
-.elem-pip.fire { background: var(--fire); }
-.elem-pip.water { background: var(--water); }
-.elem-pip.earth { background: var(--earth); }
-.elem-pip.air { background: var(--air); }
+.elem-pip img {
+  width: 100%; height: 100%; object-fit: contain;
+}
 .elem-count { font-weight: 600; min-width: 30px; }
 .elem-bar { flex: 1; height: 10px; background: var(--bg); border-radius: 3px; overflow: hidden; }
 .elem-bar-fill { height: 100%; border-radius: 3px; }
@@ -934,8 +931,8 @@ const ELEM_COLORS = { fire: 'var(--fire)', water: 'var(--water)', earth: 'var(--
 
 function pipSpan(element, count) {
   let s = '';
-  const letter = {fire:'F',water:'W',earth:'E',air:'A'}[element] || '?';
-  for (let i = 0; i < count; i++) s += `<span class="elem-pip ${element}">${letter}</span>`;
+  const file = {fire:'F',water:'W',earth:'E',air:'A'}[element] || '?';
+  for (let i = 0; i < count; i++) s += `<span class="elem-pip ${element}"><img src="static/${file}.png" alt="${file}"></span>`;
   return s;
 }
 

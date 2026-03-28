@@ -57,30 +57,6 @@
       "condition": "genesis_temporary",
       "note": "Has 1 air pip innately. Genesis: provides (E)(F)(W) this turn only. Partial source for non-air elements."
     },
-    "City of Glass": {
-      "provides": ["air"],
-      "pips_each": 1,
-      "condition": "conditional_threshold",
-      "note": "(A) threshold with 2 mana, but destroyed when damaged. Count as full air source."
-    },
-    "City of Plenty": {
-      "provides": ["water"],
-      "pips_each": 1,
-      "condition": "conditional_threshold",
-      "note": "(W) threshold with 2 mana, but also gives opponent 1 mana. Count as full water source."
-    },
-    "City of Souls": {
-      "provides": ["earth"],
-      "pips_each": 1,
-      "condition": "conditional_threshold",
-      "note": "(E) threshold with 2 mana, but enemies can redirect damage. Count as full earth source."
-    },
-    "City of Traitors": {
-      "provides": ["fire"],
-      "pips_each": 1,
-      "condition": "conditional_threshold",
-      "note": "(F) threshold with 2 mana, but opponent can cast stealthed minions here. Count as full fire source."
-    },
     "The Empyrean": {
       "provides": ["air", "earth", "fire", "water"],
       "pips_each": 1,
@@ -223,37 +199,44 @@
     "Land Surveyor": {
       "provides": [],
       "condition": "draw_site",
-      "note": "Genesis: draw a site. Extra atlas look: 1=negligible, 2=0.20, 3=0.33, 4-7=0.50."
+      "sites_seen_trigger": "genesis",
+      "note": "Genesis: draw a site. Bonus = P(drawn) * 0.8 (must cast + trigger genesis)."
     },
     "Kettletop Leprechaun": {
       "provides": [],
       "condition": "draw_site_deathrite",
-      "note": "Deathrite: draw a site. Less reliable than genesis. 1=negligible, 2-3=0.15, 4=0.25."
+      "sites_seen_trigger": "deathrite",
+      "note": "Deathrite: draw a site. Bonus = P(drawn) * 0.4 (must cast, then die, then trigger)."
     },
     "Frontier Settlers": {
       "provides": [],
       "condition": "play_top_site",
-      "note": "Tap: play topmost site to adjacent void. One-time use. Counts as ~0.25 extra look."
+      "sites_seen_trigger": "genesis",
+      "note": "Tap: play topmost site to adjacent void. One-time use. Bonus = P(drawn) * 0.8 (draw + cast + tap once)."
     },
     "Landmass": {
       "provides": [],
       "condition": "draw_and_play_site",
-      "note": "Magic: draw a site, may play a land site. Counts as ~0.15 extra look per copy."
+      "sites_seen_trigger": "cast",
+      "note": "Magic: draw a site, may play a land site. Bonus = P(drawn) * 0.9 (just need to cast it)."
     },
     "Overflow": {
       "provides": [],
       "condition": "draw_and_play_site",
-      "note": "Magic: draw a site, may play a water site. Counts as ~0.15 extra look per copy."
+      "sites_seen_trigger": "cast",
+      "note": "Magic: draw a site, may play a water site. Bonus = P(drawn) * 0.9 (just need to cast it)."
     },
     "Sow the Earth": {
       "provides": [],
       "condition": "play_top_site",
-      "note": "Aura: plays top site to a void. That site provides DOUBLE mana and threshold. Counts as ~0.25 extra look."
+      "sites_seen_trigger": "cast",
+      "note": "Aura: plays top site to a void. Double mana/threshold. Bonus = P(drawn) * 0.9 (just cast it)."
     },
     "Clay Golem": {
       "provides": [],
       "condition": "play_top_site_deathrite",
-      "note": "Artifact: deathrite plays top site. Less reliable. Counts as ~0.10 extra look per copy."
+      "sites_seen_trigger": "deathrite",
+      "note": "Artifact: deathrite plays top site. Bonus = P(drawn) * 0.4 (must cast, then die)."
     },
     "Tide Naiads": {
       "provides": ["water"],

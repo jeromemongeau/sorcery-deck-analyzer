@@ -1,0 +1,19 @@
+{
+  "nodes": [
+    { "id": "formula", "type": "rectangle", "label": "P(X >= k) = C(K,k) * C(N-K, n-k) / C(N,n)" },
+    { "id": "n_big", "type": "rectangle", "label": "N = Atlas size\n(total sites)" },
+    { "id": "k_big", "type": "rectangle", "label": "K = Element sources\n(sites with that element)" },
+    { "id": "n_small", "type": "rectangle", "label": "n = Sites seen\n(by this turn)" },
+    { "id": "k_small", "type": "rectangle", "label": "k = Pips needed\n(threshold requirement)" },
+    { "id": "question", "type": "diamond", "label": "What are the odds\nyou've seen enough?" },
+    { "id": "result", "type": "rectangle", "label": "87% chance\nthreshold is met" }
+  ],
+  "edges": [
+    { "from": "n_big", "to": "formula" },
+    { "from": "k_big", "to": "formula" },
+    { "from": "n_small", "to": "formula" },
+    { "from": "k_small", "to": "formula" },
+    { "from": "formula", "to": "question" },
+    { "from": "question", "to": "result" }
+  ]
+}

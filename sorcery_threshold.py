@@ -380,6 +380,35 @@ class DeckAnalyzer:
             if aname == "Seer":
                 self.is_seer = True
 
+        # Count sites-seen bonus from spellbook cards that draw/play sites
+        self.adj_extra_sites += self._count_sites_seen_bonus()
+
+    def _count_sites_seen_bonus(self) -> float:
+        """Count extra sites seen from spellbook cards that draw/play sites.
+
+        Uses hypergeometric probability of having drawn at least 1 copy
+        by a mid-game turn (~5 spells seen from a spellbook), multiplied
+        by a reliability discount based on trigger type:
+          - genesis: 0.8 (must cast it, triggers on entry)
+          - cast: 0.9 (just cast the spell)
+          - deathrite: 0.4 (must cast, then it must die)
+        """
+        TRIGGER_DISCOUNT = {"genesis": 0.8, "cast": 0.8, "deathrite": 0.8}
+        MID_GAME_SPELLS_SEEN = 5  # ~turn 3 for midrange
+
+        bonus = 0.0
+        for card, name, qty in self.spellbook:
+            special = SPECIAL_SPELLBOOK_SOURCES.get(name)
+            if not special or "sites_seen_trigger" not in special:
+                continue
+            trigger = special["sites_seen_trigger"]
+            discount = TRIGGER_DISCOUNT.get(trigger, 0.5)
+            # P(drawn at least 1 copy by mid-game)
+            p_drawn = 1 - float(hypergeom.cdf(0, self.spellbook_size, qty,
+                                               min(MID_GAME_SPELLS_SEEN, self.spellbook_size)))
+            bonus += p_drawn * discount
+        return bonus
+
     def _parse_deck(self, deck: dict):
         # Avatar
         for name, qty in deck.get("avatar", []):
@@ -999,7 +1028,7 @@ class DeckAnalyzer:
                         label += " (flooded)"
                         contributors.append(label)
                     elif condition == "conditional_threshold":
-                        # City of Glass/Plenty/Souls/Traitors: full source with downside
+                        # The Empyrean: full source with downside
                         count += qty * pips_each
                         contributors.append(label)
                     elif condition in ("genesis_choose", "copy", "genesis_temporary", "scry_atlas"):
@@ -1050,44 +1079,13 @@ class DeckAnalyzer:
         return source_count
 
     def _get_special_site_adjustments(self, element: str, pips: int) -> float:
-        """Calculate fractional adjustments from special sites like Mirror Realm, Valley of Delight, etc."""
+        """Calculate fractional adjustments from special sites like Valley of Delight, Floodplain."""
         adjustment = 0.0
 
-        # Count how many elements in deck have multi-pip spells
-        elements_with_multi_pip = set()
-        for card, name, qty in self.spellbook:
-            th = card["guardian"].get("thresholds", {})
-            for e in ELEMENTS:
-                if th.get(e, 0) >= 2:
-                    elements_with_multi_pip.add(e)
-
-        # Count deck's distinct elements in spellbook
-        deck_elements = set()
-        for card, name, qty in self.spellbook:
-            th = card["guardian"].get("thresholds", {})
-            for e in ELEMENTS:
-                if th.get(e, 0) > 0:
-                    deck_elements.add(e)
-
         for card, name, qty in self.atlas:
-            # Mirror Realm
-            if name == "Mirror Realm" and pips >= 2 and element in elements_with_multi_pip:
-                n = len(elements_with_multi_pip)
-                if n == 1:
-                    adjustment += 1.0 * qty
-                elif n == 2:
-                    adjustment += 0.5 * qty
-                else:
-                    adjustment += 0.25 * qty
-
-            # Valley of Delight
+            # Valley of Delight: always 0.5 per element (genesis choose one)
             if name == "Valley of Delight":
-                n_elem = len(deck_elements)
-                has_multi = len(elements_with_multi_pip) > 0
-                if n_elem <= 2 and not has_multi:
-                    adjustment += 1.0 * qty
-                else:
-                    adjustment += 0.5 * qty
+                adjustment += 0.5 * qty
 
             # Floodplain (water only, for 2+ pips)
             if name == "Floodplain" and element == "water" and pips >= 2:
