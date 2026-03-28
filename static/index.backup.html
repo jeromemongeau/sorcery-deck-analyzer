@@ -271,7 +271,6 @@ textarea::placeholder { color: var(--text2); opacity: 0.6; }
 <div class="tabs">
   <button class="tab active" data-panel="deck-panel">Threshold</button>
   <button class="tab" data-panel="stats-panel">Deck Stats</button>
-  <button class="tab" data-panel="about-panel">About Threshold %</button>
 </div>
 
 <!-- ======================== DECK ANALYZER ======================== -->
@@ -333,15 +332,12 @@ Format: QUANTITY SITE_NAME"></textarea>
 
   <div id="results-section" class="hidden">
 
-    <!-- Special Cards (separate card) -->
-    <div class="card hidden" id="special-cards-card">
-      <h2>Special Cards in Your Deck <span class="tip" data-tip="Cards that affect threshold calculations beyond their base stats.\nGreen = fully modeled in the probability calculation.\nOrange = not modeled, use manual adjustments to compensate.">?</span></h2>
-      <div id="special-cards-ref" style="font-size:0.78rem;line-height:1.7;"></div>
-    </div>
-
-    <!-- Settings + Draw Plan -->
+    <!-- Settings + Draw Plan (just above threshold) -->
     <div class="card">
       <h2>Threshold Settings</h2>
+
+      <!-- Special cards in deck (populated dynamically) -->
+      <div id="special-cards-ref" class="assumptions hidden" style="font-size:0.78rem;line-height:1.7;"></div>
 
       <!-- Manual adjustments -->
       <div style="margin-top:0.5rem;">
@@ -359,10 +355,23 @@ Format: QUANTITY SITE_NAME"></textarea>
             <label>Extra spells drawn</label>
             <input type="number" id="adj-extra-spells" value="0" min="0" max="10" style="width:60px;">
           </div>
-          <input type="hidden" id="adj-fire" value="0">
-          <input type="hidden" id="adj-water" value="0">
-          <input type="hidden" id="adj-earth" value="0">
-          <input type="hidden" id="adj-air" value="0">
+          <div class="field">
+            <label>Extra fire pips</label>
+            <input type="number" id="adj-fire" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <div class="field">
+            <label>Extra water pips</label>
+            <input type="number" id="adj-water" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <div class="field">
+            <label>Extra earth pips</label>
+            <input type="number" id="adj-earth" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <div class="field">
+            <label>Extra air pips</label>
+            <input type="number" id="adj-air" value="0" min="0" max="10" style="width:60px;">
+          </div>
+          <button class="primary" onclick="analyzeDeck()">Re-Analyze</button>
         </div>
       </div>
 
@@ -464,145 +473,13 @@ Format: QUANTITY SITE_NAME"></textarea>
   </div>
 </div>
 
-<!-- ======================== ABOUT THRESHOLD ======================== -->
-<div id="about-panel" class="panel">
-
-  <div class="card">
-    <h2>What is Threshold %?</h2>
-    <p style="font-size:1.1rem;color:var(--text);line-height:1.7;margin-bottom:1.5rem;">
-      What are the odds you've seen enough sites to play that card.
-    </p>
-    <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;">
-      Every spell in Sorcery requires a certain number of element pips (threshold) to cast. Your sites provide those pips. Each turn you reveal sites from your atlas &mdash; the calculator tells you the probability that you've revealed enough of the right element by the turn you want to cast that spell.
-    </p>
-    <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;">
-      It uses the <strong style="color:var(--text);">hypergeometric distribution</strong> &mdash; the same math as drawing colored balls from an urn without replacement.
-    </p>
-  </div>
-
-  <div class="card">
-    <h2>The Formula</h2>
-    <div style="background:var(--bg);border-radius:8px;padding:1.2rem 1.5rem;margin-bottom:1.2rem;overflow-x:auto;">
-      <div style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;line-height:2;text-align:center;">
-        P(X &ge; <span style="color:var(--fire);">k</span>)
-        &nbsp;=&nbsp; 1 &minus; &sum;
-        <span style="font-size:0.75rem;vertical-align:sub;">i=0</span><sup style="color:var(--fire);">k-1</sup>
-        &nbsp;
-        C(<span style="color:var(--water);">K</span>, i)
-        &times;
-        C(<span style="color:var(--earth);">N</span> &minus; <span style="color:var(--water);">K</span>, <span style="color:var(--air);">n</span> &minus; i)
-        &nbsp;/&nbsp;
-        C(<span style="color:var(--earth);">N</span>, <span style="color:var(--air);">n</span>)
-      </div>
-    </div>
-
-    <h3 style="margin-bottom:0.6rem;">In plain words</h3>
-    <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;margin-bottom:1.5rem;">
-      <strong style="color:var(--text);">Favorable draws</strong> &times; <strong style="color:var(--text);">Ways to fill the rest</strong> &divide; <strong style="color:var(--text);">All possible draws</strong>
-    </p>
-
-    <h3 style="margin-bottom:0.6rem;">Variables</h3>
-    <table class="th-table" style="max-width:700px;">
-      <thead>
-        <tr>
-          <th>Symbol</th>
-          <th>Name</th>
-          <th>Meaning</th>
-          <th>Example</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--earth);">N</td>
-          <td>Atlas size</td>
-          <td style="color:var(--text2);">Total number of sites in your atlas</td>
-          <td style="color:var(--text2);">15 sites</td>
-        </tr>
-        <tr>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--water);">K</td>
-          <td>Element sources</td>
-          <td style="color:var(--text2);">Sites in your atlas that have the element you need</td>
-          <td style="color:var(--text2);">6 fire sites</td>
-        </tr>
-        <tr>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--air);">n</td>
-          <td>Sites seen</td>
-          <td style="color:var(--text2);">How many sites you've revealed by this turn (opening hand + draws)</td>
-          <td style="color:var(--text2);">5 sites by turn 3</td>
-        </tr>
-        <tr>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--fire);">k</td>
-          <td>Pips needed</td>
-          <td style="color:var(--text2);">The threshold requirement on the spell you want to cast</td>
-          <td style="color:var(--text2);">2 for a (FF) spell</td>
-        </tr>
-        <tr>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--text);">C(a, b)</td>
-          <td>Combinations</td>
-          <td style="color:var(--text2);">"a choose b" &mdash; the number of ways to pick b items from a items</td>
-          <td style="color:var(--text2);">C(6,2) = 15 ways</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="card">
-    <h2>What Modifies the Calculation</h2>
-    <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;">
-      The core formula uses four variables. Several game mechanics adjust them before the probability is computed:
-    </p>
-    <table class="th-table" style="max-width:800px;">
-      <thead>
-        <tr>
-          <th>Modifier</th>
-          <th>What it changes</th>
-          <th>How</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>Archetype</strong></td>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--air);">n</td>
-          <td style="color:var(--text2);">Aggro, Midrange, or Pathfinder &mdash; each sees a different number of sites per turn</td>
-        </tr>
-        <tr>
-          <td><strong>Elementalist</strong></td>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--fire);">k</td>
-          <td style="color:var(--text2);">Reduces every element's required pips by 1</td>
-        </tr>
-        <tr>
-          <td><strong>Special sites</strong></td>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--water);">K</td>
-          <td style="color:var(--text2);">Annual Fair, Valley of Delight, Floodplain &mdash; add full or fractional sources</td>
-        </tr>
-        <tr>
-          <td><strong>Spellbook sources</strong></td>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--water);">K</td>
-          <td style="color:var(--text2);">Cores, Families, Shrine &mdash; fractional credit based on draw probability</td>
-        </tr>
-        <tr>
-          <td><strong>Site-draw cards</strong></td>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--air);">n</td>
-          <td style="color:var(--text2);">Land Surveyor, Landmass, etc. &mdash; adds extra sites seen based on P(drawn) &times; 0.8</td>
-        </tr>
-        <tr>
-          <td><strong>Multi-element</strong></td>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--text2);">result</td>
-          <td style="color:var(--text2);">For spells needing two elements, each element's probability is multiplied together</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-</div>
-
 </div><!-- /.app -->
 
 <div id="tooltip-box"></div>
 
 <script>
 // =====================================================================
-// Tooltip system
+// Tooltip system (positioned via JS to avoid z-index/overflow issues)
 // =====================================================================
 const tooltipBox = document.getElementById('tooltip-box');
 
@@ -615,10 +492,15 @@ document.addEventListener('mouseover', (e) => {
   tooltipBox.style.display = 'block';
 
   const rect = tip.getBoundingClientRect();
+  // Position above the ? icon, centered
   let left = rect.left + rect.width / 2 - tooltipBox.offsetWidth / 2;
   let top = rect.top - tooltipBox.offsetHeight - 8;
 
-  if (top < 4) { top = rect.bottom + 8; }
+  // If it goes above the viewport, show below instead
+  if (top < 4) {
+    top = rect.bottom + 8;
+  }
+  // Keep within horizontal bounds
   if (left < 4) left = 4;
   if (left + tooltipBox.offsetWidth > window.innerWidth - 4) {
     left = window.innerWidth - tooltipBox.offsetWidth - 4;
@@ -648,13 +530,36 @@ document.querySelectorAll('.tab').forEach(tab => {
 });
 
 // =====================================================================
-// Constants & State
+// Archetype assumptions display
 // =====================================================================
-const MAX_DRAW_TURNS = 6;
-let loadedDeck = null;
-let lastReport = null;
-let lastTarget = 0.90;
-let _reanalyzeTimer = null;
+const ASSUMPTIONS = {
+  aggro: {
+    label: 'Aggro',
+    mulligan: '2 atlas cards mulliganed',
+    draw: 'Draw site T2, then ~33% of draw steps',
+    sites: 'T1=5, T2-4=6, T5=7, T6-7=8',
+    notes: 'Fast deck, tops out ~6-7 sites'
+  },
+  midrange: {
+    label: 'Mid-range',
+    mulligan: '3 atlas cards mulliganed',
+    draw: 'Draw site ~50% of draw steps',
+    sites: 'T1=5, T2=6, T3-4=7, T5-6=8, T7-8=9, T9=10',
+    notes: 'Balanced deck, reaches 9-10 sites'
+  },
+  pathfinder: {
+    label: 'Pathfinder',
+    mulligan: 'No opening hand (Pathfinder rule)',
+    draw: 'Play top site each turn via ability',
+    sites: 'T1=1, T2=2, T3=3 ... T6-7=6, T8=7, T9=8, T10=9',
+    notes: 'No duplicate sites in atlas'
+  }
+};
+
+function updateAssumptions() {
+  // No longer displayed — archetype is fixed to midrange
+}
+const MAX_DRAW_TURNS = 6; // actual draws (T1-T6 on draw, T2-T7 on play)
 
 function getAdjustments() {
   return {
@@ -669,50 +574,40 @@ function getAdjustments() {
   };
 }
 
-// =====================================================================
-// Auto-Reanalyze (debounced)
-// =====================================================================
-function autoReanalyze() {
+async function applyCurrentTurn() {
   if (!loadedDeck) return;
-  clearTimeout(_reanalyzeTimer);
-  _reanalyzeTimer = setTimeout(async () => {
-    const archetype = 'midrange';
-    const onPlay = isOnThePlay();
-    const target = parseInt(document.getElementById('target-input').value) / 100;
-    const currentTurn = parseInt(document.getElementById('current-turn-select')?.value || '0');
+  const btn = document.getElementById('analyze-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>'; }
 
-    try {
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          deck: loadedDeck, archetype, on_the_play: onPlay,
-          target_prob: target, draw_schedule: getDrawSchedule(),
-          adjustments: getAdjustments(), current_turn: currentTurn
-        })
-      });
-      const report = await res.json();
-      lastReport = report;
-      lastTarget = target;
-      renderThresholdSection(report, target, currentTurn);
-      renderSpecialCardsRef(report);
-    } catch (e) {
-      console.error(e);
-    }
-  }, 300);
+  const archetype = 'midrange';
+  const onPlay = isOnThePlay();
+  const target = parseInt(document.getElementById('target-input').value) / 100;
+  const currentTurn = parseInt(document.getElementById('current-turn-select').value) || 0;
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        deck: loadedDeck, archetype, on_the_play: onPlay,
+        target_prob: target, draw_schedule: getDrawSchedule(),
+        adjustments: getAdjustments(), current_turn: currentTurn
+      })
+    });
+    const report = await res.json();
+    lastReport = report;
+    lastTarget = target;
+    // Only re-render threshold table + gap + sources, not the whole page
+    renderThresholdSection(report, target, currentTurn);
+  } catch (e) {
+    console.error(e);
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Analyze Deck'; }
 }
 
 function attachSettingsListeners() {
-  const ids = ['target-input', 'adj-extra-sites', 'adj-extra-spells', 'adj-fire', 'adj-water', 'adj-earth', 'adj-air'];
-  for (const id of ids) {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('change', autoReanalyze);
-  }
-}
-
-async function applyCurrentTurn() {
-  if (!loadedDeck) return;
-  autoReanalyze();
+  // Play/draw listener is now on the select inside the draw table via onPlayDrawChange()
 }
 
 // =====================================================================
@@ -724,6 +619,8 @@ function isOnThePlay() {
 }
 
 function getDrawTurns() {
+  // On the play: T1 is empty (no draw), show T1..T1+MAX (6 actual draws)
+  // On the draw: T1..MAX (6 actual draws)
   const onPlay = isOnThePlay();
   return onPlay
     ? { start: 1, end: 1 + MAX_DRAW_TURNS, noDrawTurn: 1 }
@@ -735,11 +632,13 @@ function buildDrawTable() {
   const thead = document.getElementById('dp-thead');
   const tbody = document.getElementById('dp-tbody');
 
+  // Header
   let hdr = '<tr><th>Setup</th>';
   for (let t = start; t <= end; t++) hdr += `<th>T${t}</th>`;
   hdr += '</tr>';
   thead.innerHTML = hdr;
 
+  // Setup cell: play/draw + mulligan counters
   const onPlay = isOnThePlay();
   let selRow = `<td style="font-size:0.7rem;">
     <div class="field" style="gap:0.15rem;margin-bottom:0.3rem;">
@@ -777,9 +676,9 @@ function buildDrawTable() {
 }
 
 function onPlayDrawChange() {
+  // Rebuild the whole table since column count changes
   buildDrawTable();
   fillDrawPreset('midrange');
-  autoReanalyze();
 }
 
 function initDrawPlanner() {
@@ -795,6 +694,7 @@ function onMulliganChange(source) {
   let sites = parseInt(sitesEl.value) || 0;
   let spells = parseInt(spellsEl.value) || 0;
 
+  // Enforce max 3 total: adjust the other field
   if (sites + spells > 3) {
     if (source === 'sites') {
       spells = 3 - sites;
@@ -805,6 +705,7 @@ function onMulliganChange(source) {
     }
   }
 
+  // Update total display
   const totalEl = document.getElementById('dp-mul-total');
   if (totalEl) totalEl.textContent = sites + spells;
 
@@ -813,6 +714,8 @@ function onMulliganChange(source) {
 
 function fillDrawPreset(archetype) {
   const { start, end, noDrawTurn } = getDrawTurns();
+
+  // 7-draw base patterns + mulligan split
   const presets = {
     aggro:      { mulSites: 2, mulSpells: 1, base: ['spellbook','spellbook','spellbook','atlas','spellbook','spellbook','spellbook'] },
     midrange:   { mulSites: 2, mulSpells: 1, base: ['atlas','spellbook','atlas','spellbook','atlas','spellbook','spellbook'] },
@@ -825,9 +728,10 @@ function fillDrawPreset(archetype) {
   const totalEl = document.getElementById('dp-mul-total');
   if (totalEl) totalEl.textContent = p.mulSites + p.mulSpells;
 
+  // Fill the actual draw turns (skipping the no-draw turn)
   let drawIdx = 0;
   for (let t = start; t <= end; t++) {
-    if (t === noDrawTurn) continue;
+    if (t === noDrawTurn) continue; // skip no-draw turn
     const sel = document.getElementById(`dp-draw-${t}`);
     if (sel) sel.value = p.base[drawIdx] || 'spellbook';
     drawIdx++;
@@ -836,7 +740,8 @@ function fillDrawPreset(archetype) {
 }
 
 function updateDrawCounts() {
-  autoReanalyze();
+  // No display row anymore — this function is kept for onchange callbacks
+  // that may trigger re-analysis
 }
 
 function getDrawSchedule() {
@@ -854,17 +759,20 @@ function getDrawSchedule() {
   };
   for (let t = start; t <= end; t++) {
     if (t === noDrawTurn) {
-      schedule[String(t)] = 'none';
+      schedule[String(t)] = 'none'; // no draw this turn
     } else {
       const sel = document.getElementById(`dp-draw-${t}`);
       schedule[String(t)] = sel ? sel.value : 'spellbook';
     }
   }
+  // Fill beyond table with spellbook
   for (let t = end + 1; t <= 10; t++) {
     schedule[String(t)] = 'spellbook';
   }
   return schedule;
 }
+
+// initDrawPlanner() called after first analysis when elements exist
 
 // =====================================================================
 // Parse deck list text
@@ -881,6 +789,7 @@ function parseDeckList(text) {
   return cards;
 }
 
+// Known avatar names for detection
 const AVATARS = [
   'Avatar of Air','Avatar of Earth','Avatar of Fire','Avatar of Water',
   'Battlemage','Deathspeaker','Elementalist','Enchantress','Pathfinder',
@@ -894,6 +803,10 @@ const AVATARS = [
 // =====================================================================
 // URL Loading
 // =====================================================================
+let loadedDeck = null; // stores deck loaded from URL
+let lastReport = null; // stores last analysis report for re-rendering
+let lastTarget = 0.90; // stores last target for re-rendering
+
 function toggleManualInput() {
   const area = document.getElementById('manual-input-area');
   area.classList.toggle('hidden');
@@ -902,6 +815,7 @@ function toggleManualInput() {
 async function loadFromUrl() {
   const btn = document.getElementById('load-url-btn');
   const status = document.getElementById('url-status');
+  const loadingStatus = document.getElementById('loading-status');
   const url = document.getElementById('deck-url-input').value.trim();
 
   if (!url) { status.innerHTML = '<span style="color:var(--danger)">Enter a URL</span>'; status.classList.remove('hidden'); return; }
@@ -930,6 +844,7 @@ async function loadFromUrl() {
       const nSites = loadedDeck.atlas.reduce((s, c) => s + c[1], 0);
       status.innerHTML = `<span style="color:var(--success)">Loaded!</span> ${nAvatar ? loadedDeck.avatar[0][0] : '?'} | ${nSpells} spells | ${nSites} sites`;
 
+      // Auto-analyze
       btn.disabled = false;
       btn.textContent = 'Load Deck';
       await analyzeDeck();
@@ -944,18 +859,23 @@ async function loadFromUrl() {
   btn.textContent = 'Load Deck';
 }
 
+// showDeckPreview removed — deck auto-analyzes on load
+
 // =====================================================================
 // Deck Analyzer
 // =====================================================================
 async function analyzeDeck() {
   const btn = document.getElementById('analyze-btn');
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Analyzing...'; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analyzing...';
 
   let deck;
 
   if (loadedDeck && loadedDeck.spellbook.length > 0) {
+    // Use URL-loaded deck
     deck = loadedDeck;
   } else {
+    // Fall back to manual text input
     const spellbookRaw = parseDeckList(document.getElementById('spellbook-input').value);
     const atlasRaw = parseDeckList(document.getElementById('atlas-input').value);
 
@@ -984,6 +904,7 @@ async function analyzeDeck() {
     const report = await res.json();
     lastReport = report;
     lastTarget = target;
+    // Reset current turn selector
     const cts = document.getElementById('current-turn-select');
     if (cts) cts.value = '0';
     renderResults(report, target);
@@ -994,11 +915,13 @@ async function analyzeDeck() {
       initDrawPlanner();
       window._drawPlannerInitialized = true;
     }
+    updateAssumptions();
   } catch (e) {
     alert('Error: ' + e.message);
   }
 
-  if (btn) { btn.disabled = false; btn.textContent = 'Analyze Deck'; }
+  btn.disabled = false;
+  btn.textContent = 'Analyze Deck';
 }
 
 // =====================================================================
@@ -1332,16 +1255,14 @@ function renderThresholdSection(report, target, currentTurn) {
 function renderSpecialCardsRef(report) {
   const cards = report.special_cards_in_deck || [];
   const el = document.getElementById('special-cards-ref');
-  const card = document.getElementById('special-cards-card');
-  if (!el || !card) return;
+  if (!el) return;
 
   if (cards.length === 0) {
-    card.classList.add('hidden');
+    el.classList.add('hidden');
     return;
   }
 
-  const modeled = cards.filter(c => c.modeled);
-  const unmodeled = cards.filter(c => !c.modeled);
+  const hasUnmodeled = cards.some(c => !c.modeled);
 
   const CALC_TIPS = {
     pay_mana: 'Counted as 1 source for all elements in atlas source totals.\nThe +1 mana cost is noted but not subtracted from castable turn.',
@@ -1351,16 +1272,15 @@ function renderSpecialCardsRef(report) {
     always: 'All threshold requirements are reduced by 1 pip.\nA spell needing FF becomes effectively F, a spell needing W becomes free.',
     archetype_override: 'Forces the Pathfinder archetype and sites-seen table.\nNo opening hand sites, plays top site each turn.',
     conditional_note: 'Threshold is already in the card database and counted in atlas source totals.\nThe condition (empty site / adjacent to void) is assumed to be met.',
-    draw_site: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nMore copies = higher chance of drawing it = more bonus sites.',
-    draw_site_deathrite: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nLess reliable than genesis (must die first), but still modeled.',
-    draw_and_play_site: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nDraws a site and may play it when cast.',
-    play_top_site: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nPlays the top site from your atlas.',
-    play_top_site_deathrite: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nPlays top site on death — must be drawn, cast, and die first.',
   };
   const MANUAL_TIPS = {
     scry: 'Add +1 to Extra sites seen for every 2 turns you expect to scry.',
     flood_ability: 'Add +1 to Extra water pips for each site you expect to flood.',
     play_extra_site: 'Add +1 to Extra sites seen if you expect to use this ability.',
+    draw_site: 'Add +1 to Extra sites seen per 3-4 copies in deck.',
+    draw_site_deathrite: 'Add +1 to Extra sites seen per 4 copies, less reliable than genesis.',
+    play_top_site: 'Add +1 to Extra sites seen if you expect to use this.',
+    draw_and_play_site: 'Add +1 to Extra sites seen per 2-3 copies.',
     scry_atlas: 'Add +1 to Extra sites seen (improves atlas quality, not quantity).',
     ignore_threshold: 'Spells cast via this card ignore threshold entirely.\nNo adjustment needed — just know these spells bypass the check.',
     remove_threshold: 'This card removes threshold from sites.\nConsider reducing element pips if your opponent might use this against you.',
@@ -1373,31 +1293,234 @@ function renderSpecialCardsRef(report) {
     flood: 'Already counted as 1 water. Add +0.33 to Extra water pips for the flood ability.',
   };
 
-  let html = '';
-
-  // Green cards — modeled
-  if (modeled.length > 0) {
-    html += '<div style="margin-bottom:0.8rem;"><h3 style="color:var(--success);margin-bottom:0.4rem;">Modeled in calculations</h3>';
-    for (const c of modeled) {
-      const tipText = CALC_TIPS[c.condition] || 'Fully modeled in calculations.';
-      html += `<div style="margin-bottom:0.3rem;"><span style="color:var(--success);font-weight:600;">${c.name}</span> <span class="tip" data-tip="${tipText.replace(/"/g, '&quot;')}">?</span> — <span style="color:var(--text2);">${c.note}</span></div>`;
+  let html = '<strong>Special cards in your deck that affect threshold:</strong><br>';
+  for (const c of cards) {
+    const tipText = c.modeled ? (CALC_TIPS[c.condition] || 'Fully modeled in calculations.') : (MANUAL_TIPS[c.condition] || 'Use manual adjustments to compensate.');
+    if (c.modeled) {
+      html += `<span style="color:var(--success);">${c.name}</span> <span class="tip" data-tip="${tipText.replace(/"/g, '&quot;')}">?</span> — <span style="color:var(--text2);">${c.note}</span><br>`;
+    } else {
+      html += `<span style="color:var(--warn);">${c.name}</span> <span class="tip" data-tip="${tipText.replace(/"/g, '&quot;')}">?</span> — <span style="color:var(--text2);">${c.note}</span><br>`;
     }
-    html += '</div>';
   }
-
-  // Orange cards — not modeled
-  if (unmodeled.length > 0) {
-    html += '<div><h3 style="color:var(--warn);margin-bottom:0.4rem;">Manual adjustment needed</h3>';
-    for (const c of unmodeled) {
-      const tipText = MANUAL_TIPS[c.condition] || 'Use manual adjustments to compensate.';
-      html += `<div style="margin-bottom:0.3rem;"><span style="color:var(--warn);font-weight:600;">${c.name}</span> <span class="tip" data-tip="${tipText.replace(/"/g, '&quot;')}">?</span> — <span style="color:var(--text2);">${c.note}</span></div>`;
-    }
-    html += '<div style="margin-top:0.5rem;font-size:0.75rem;color:var(--text2);font-style:italic;">Use Threshold Settings adjustments below to compensate for these cards.</div>';
-    html += '</div>';
+  if (hasUnmodeled) {
+    html += '<span style="color:var(--text2);font-style:italic;">Use the adjustments below to compensate for <span style="color:var(--warn);">orange</span> cards.</span>';
   }
 
   el.innerHTML = html;
+  el.classList.remove('hidden');
+}
+
+function renderSourcesDetail(report) {
+  const th = report.threshold;
+  const stats = report.stats;
+  const ed = stats.element_distribution;
+  const elemSources = th.element_sources;
+
+  let html = '';
+
+  for (const elem of ['fire', 'water', 'earth', 'air']) {
+    const src = elemSources[elem];
+    if (!src) continue;
+
+    html += `<div style="margin-bottom:1rem;">
+      <h3 style="display:flex;align-items:center;gap:0.4rem;">
+        ${pipSpan(elem, 1)}
+        ${elem.charAt(0).toUpperCase() + elem.slice(1)} &mdash; ${src.count} atlas sources
+      </h3>`;
+
+    // Atlas contributors
+    html += '<div style="margin:0.4rem 0 0.3rem;"><span style="color:var(--text2);font-size:0.75rem;text-transform:uppercase;">Atlas sites:</span></div>';
+    html += '<div class="stat-pills">';
+    for (const c of src.contributors) {
+      html += `<span class="pill">${c}</span>`;
+    }
+    html += '</div>';
+
+    // Spellbook sources for this element
+    const spellSources = [];
+    const spells = report.threshold.spells || [];
+    // Gather spellbook source cards from element_details
+    // We need to check the raw data — let's look at all spells' element_details
+    let sbCount = 0;
+    for (const sp of spells) {
+      const detail = sp.element_details[elem];
+      if (detail && detail.spellbook_sources > 0) {
+        sbCount = detail.spellbook_sources;
+        break;
+      }
+    }
+
+    if (sbCount > 0) {
+      html += '<div style="margin:0.5rem 0 0.3rem;"><span style="color:var(--text2);font-size:0.75rem;text-transform:uppercase;">Spellbook sources (' + sbCount + ' cards):</span>';
+      html += ` <span class="tip" data-tip="These spellbook cards provide ${elem} threshold when in play.\nThe probability of drawing them is calculated using hypergeometric distribution on the spellbook:\nP(draw >= 1) from ${sbCount} cards in a 60-card spellbook after N spell draws.">?</span>`;
+      html += '</div>';
+      html += '<div class="stat-pills">';
+
+      // Find the actual card names from the deck
+      const spellbookSourceNames = findSpellbookSourceNames(report, elem);
+      for (const [name, qty] of spellbookSourceNames) {
+        html += `<span class="pill" style="border:1px solid var(--gold);">${qty > 1 ? qty+'x ' : ''}${name}</span>`;
+      }
+      html += '</div>';
+    }
+
+    // Special sites for this element
+    if (ed.special_sites) {
+      const condLabels = {
+        pay_mana: 'costs 1 mana', genesis_choose: 'choose on genesis', copy: 'copies nearby',
+        innately_flooded: 'flooded = water', conditional_threshold: 'conditional',
+        genesis_temporary: 'genesis only', scry_atlas: 'scry atlas'
+      };
+      const specials = ed.special_sites.filter(([n, elems, q, c]) => elems.includes(elem));
+      if (specials.length > 0) {
+        html += '<div style="margin:0.5rem 0 0.3rem;"><span style="color:var(--text2);font-size:0.75rem;text-transform:uppercase;">Special sites:</span></div>';
+        html += '<div class="stat-pills">';
+        for (const [name, elems, qty, condition] of specials) {
+          html += `<span class="pill" style="border:1px solid var(--gold);">${qty > 1 ? qty+'x ' : ''}${name} <span style="color:var(--gold);font-size:0.7rem;">${condLabels[condition] || condition}</span></span>`;
+        }
+        html += '</div>';
+      }
+    }
+
+    html += '</div>';
+  }
+
+  document.getElementById('sources-detail').innerHTML = html;
+}
+
+// Helper: find spellbook card names that provide threshold for an element
+function findSpellbookSourceNames(report, element) {
+  // We don't have this from the API directly, so we'll reconstruct from known special cards
+  const SPELLBOOK_PROVIDERS = {
+    fire: ['Ruby Core', 'Blacksmith Family', 'Shrine of the Dragonlord'],
+    water: ['Aquamarine Core', "Fisherman's Family", 'Shrine of the Dragonlord'],
+    earth: ['Onyx Core', 'Common Cottagers', 'Shrine of the Dragonlord'],
+    air: ['Amethyst Core', 'Castle Servants', 'Shrine of the Dragonlord'],
+  };
+
+  const providers = SPELLBOOK_PROVIDERS[element] || [];
+  const result = [];
+  const deck = loadedDeck || {};
+  const spellbook = deck.spellbook || [];
+
+  for (const [name, qty] of spellbook) {
+    if (providers.some(p => p.toLowerCase() === name.toLowerCase())) {
+      result.push([name, qty]);
+    }
+  }
+  return result;
+}
+
+// =====================================================================
+// Quick Calculator
+// =====================================================================
+async function quickCalc() {
+  const data = {
+    atlas_size: parseInt(document.getElementById('q-atlas').value),
+    sources: parseInt(document.getElementById('q-sources').value),
+    pips: parseInt(document.getElementById('q-pips').value),
+    turn: parseInt(document.getElementById('q-turn').value),
+    archetype: document.getElementById('q-archetype').value,
+    on_the_play: document.getElementById('q-playdraw').value === 'play',
+  };
+
+  const res = await fetch('/api/quick', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  const result = await res.json();
+
+  const pc = result.probability >= 90 ? 'var(--success)' : result.probability >= 80 ? 'var(--warn)' : 'var(--danger)';
+  document.getElementById('quick-result').classList.remove('hidden');
+  document.getElementById('quick-result').innerHTML =
+    `<div class="big-num" style="color:${pc}">${result.probability}%</div>
+     <div class="label">Probability of hitting ${data.pips} pip(s) by turn ${data.turn}</div>
+     <div class="detail">
+       ${data.sources} sources in ${data.atlas_size}-card atlas | ${result.sites_seen} sites seen by T${data.turn}<br>
+       <strong>Min sources for 90%: ${result.min_sources_90}</strong>
+       ${data.sources < result.min_sources_90
+         ? ` &mdash; <span style="color:var(--danger)">need +${result.min_sources_90 - data.sources} more</span>`
+         : ` &mdash; <span style="color:var(--success)">you're covered</span>`}
+     </div>`;
+
+  // Sweep chart
+  await renderSweep(data);
+}
+
+async function renderSweep(data) {
+  const card = document.getElementById('sweep-card');
   card.classList.remove('hidden');
+  let html = '<div style="margin-top:0.5rem;">';
+  const promises = [];
+  for (let s = 1; s <= data.atlas_size; s++) {
+    promises.push(
+      fetch('/api/quick', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({...data, sources: s})
+      }).then(r => r.json()).then(r => ({sources: s, prob: r.probability}))
+    );
+  }
+  const results = await Promise.all(promises);
+
+  for (const r of results) {
+    const color = r.prob >= 90 ? 'var(--success)' : r.prob >= 80 ? 'var(--warn)' : r.prob < 50 ? 'var(--danger)' : 'var(--text2)';
+    const highlight = r.sources === data.sources ? 'border:2px solid var(--accent);' : '';
+    html += `<div style="display:inline-flex;flex-direction:column;align-items:center;width:28px;${highlight}border-radius:4px;padding:2px;">
+      <div style="height:60px;width:16px;background:var(--bg);border-radius:2px;display:flex;align-items:end;overflow:hidden;">
+        <div style="width:100%;height:${r.prob}%;background:${color};border-radius:2px;"></div>
+      </div>
+      <div style="font-size:0.6rem;color:var(--text2);margin-top:2px;">${r.sources}</div>
+    </div>`;
+  }
+  html += '</div>';
+  html += `<div style="font-size:0.75rem;color:var(--text2);margin-top:0.5rem;">
+    Each bar = probability with N sources | Highlighted = your current count (${data.sources})</div>`;
+  document.getElementById('sweep-chart').innerHTML = html;
+}
+
+// =====================================================================
+// Threshold Table
+// =====================================================================
+async function loadTable() {
+  const data = {
+    archetype: document.getElementById('t-archetype').value,
+    atlas_size: parseInt(document.getElementById('t-atlas').value),
+    on_the_play: document.getElementById('t-playdraw').value === 'play',
+  };
+
+  const res = await fetch('/api/table', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  const table = await res.json();
+
+  const turns = Object.keys(table);
+  let html = '<thead><tr><th>Sources</th>';
+  for (const t of turns) {
+    for (let p = 1; p <= 4; p++) {
+      html += `<th>T${t}<br>${p}pip</th>`;
+    }
+  }
+  html += '</tr></thead><tbody>';
+
+  for (let s = 1; s <= 25; s++) {
+    html += `<tr><td><strong>${s}</strong></td>`;
+    for (const t of turns) {
+      for (let p = 1; p <= 4; p++) {
+        const entry = table[t][p];
+        const prob = entry ? entry.find(e => e[0] === s) : null;
+        const val = prob ? prob[1] : 0;
+        const pc = val >= 90 ? 'prob-ok' : val >= 80 ? 'prob-warn' : val > 0 ? 'prob-bad' : '';
+        html += `<td class="${pc}" style="font-size:0.75rem;">${val > 0 ? val + '%' : '-'}</td>`;
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  document.getElementById('ref-table').innerHTML = html;
 }
 
 // =====================================================================

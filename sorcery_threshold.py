@@ -15,6 +15,7 @@ Math based on: https://scourgealters.wixsite.com/blog/post/deckbuilder-s-toolkit
 
 import argparse
 import json
+import math
 import os
 import sys
 from collections import Counter, defaultdict
@@ -167,6 +168,9 @@ def threshold_probability(
 
     Uses hypergeometric distribution:
         P(X >= k) = 1 - hypergeom.cdf(k-1, N, K, n)
+
+    NOTE: This treats each pip as a separate "ball". For multi-pip sites,
+    use threshold_probability_multi_pip() instead.
     """
     if pips_needed <= 0:
         return 1.0
@@ -177,6 +181,70 @@ def threshold_probability(
     if sites <= 0 or src <= 0:
         return 0.0
     return float(1 - hypergeom.cdf(pips_needed - 1, atlas_size, src, sites))
+
+
+def _log_comb(n: int, k: int) -> float:
+    """Log of binomial coefficient C(n, k) using lgamma for numerical stability."""
+    if k < 0 or k > n:
+        return float('-inf')
+    if k == 0 or k == n:
+        return 0.0
+    return math.lgamma(n + 1) - math.lgamma(k + 1) - math.lgamma(n - k + 1)
+
+
+def threshold_probability_multi_pip(
+    atlas_size: int,
+    K1: int,
+    K2: int,
+    sites_seen: int,
+    pips_needed: int,
+) -> float:
+    """
+    Accurate threshold probability using multivariate hypergeometric.
+
+    Treats each CARD as a draw unit (not each pip). A 2-pip site satisfies
+    a 2-pip requirement in a single draw.
+
+    Args:
+        atlas_size: N, total cards in atlas
+        K1: number of cards with exactly 1 pip of the element
+        K2: number of cards with exactly 2 pips of the element
+        sites_seen: n, cards drawn
+        pips_needed: k, total pips needed
+
+    Returns: P(total pips from drawn cards >= k)
+    """
+    if pips_needed <= 0:
+        return 1.0
+
+    N = atlas_size
+    n = min(sites_seen, N)
+    k = pips_needed
+    K1 = max(0, min(K1, N))
+    K2 = max(0, min(K2, N - K1))
+    K0 = N - K1 - K2
+
+    if n <= 0:
+        return 0.0
+    if K1 + K2 == 0:
+        return 0.0
+
+    log_total = _log_comb(N, n)
+
+    # Sum P(total pips < k) by enumerating (j1, j2) draws from 1-pip and 2-pip categories
+    p_less = 0.0
+    for j2 in range(min(K2, n) + 1):
+        for j1 in range(min(K1, n - j2) + 1):
+            if j1 + 2 * j2 >= k:
+                break  # j1 only increases, so all further j1 values also >= k
+            j0 = n - j1 - j2
+            if j0 < 0 or j0 > K0:
+                continue
+            log_p = (_log_comb(K1, j1) + _log_comb(K2, j2) +
+                     _log_comb(K0, j0) - log_total)
+            p_less += math.exp(log_p)
+
+    return max(0.0, min(1.0, 1.0 - p_less))
 
 
 def find_min_sources(
@@ -256,7 +324,8 @@ def get_spells_seen(turn: int, on_the_play: bool = True,
 
 def combined_threshold_probability(
     atlas_size: int,
-    atlas_sources: int,
+    atlas_K1: int,
+    atlas_K2: int,
     sites_seen: int,
     pips_needed: int,
     spellbook_size: int = 60,
@@ -265,53 +334,29 @@ def combined_threshold_probability(
 ) -> float:
     """Calculate probability of meeting threshold from atlas + spellbook sources combined.
 
-    Uses inclusion-exclusion:
-    P(met) = 1 - P(not enough from atlas AND not enough from spellbook to fill gap)
+    Atlas uses the multi-pip model (K1=1-pip cards, K2=2-pip cards).
+    Spellbook sources always provide 1 pip each (standard hypergeometric).
 
-    For each possible shortfall k from the atlas (0..pips_needed),
-    calculate P(atlas gives pips_needed-k) * P(spellbook gives at least k).
+    For each possible spellbook contribution (0..min(sb_sources, sb_seen)):
+    P(exactly j from spellbook) * P(at least k-j from atlas using multi-pip model).
     """
     if pips_needed <= 0:
         return 1.0
     if spellbook_sources <= 0 or spells_seen <= 0:
-        return threshold_probability(atlas_size, atlas_sources, sites_seen, pips_needed)
+        return threshold_probability_multi_pip(atlas_size, atlas_K1, atlas_K2, sites_seen, pips_needed)
 
-    # Sum over all ways atlas + spellbook can meet the threshold
-    total_prob = 0.0
-    src_atlas = max(0, min(int(round(atlas_sources)), atlas_size))
     src_spell = max(0, min(spellbook_sources, spellbook_size))
-    n_atlas = min(sites_seen, atlas_size)
     n_spell = min(spells_seen, spellbook_size)
 
-    if n_atlas <= 0:
+    if sites_seen <= 0:
         return 0.0
 
-    for from_atlas in range(0, pips_needed + 1):
-        from_spellbook = pips_needed - from_atlas
-
-        # P(exactly from_atlas pips from atlas)
-        p_atlas = float(hypergeom.pmf(from_atlas, atlas_size, src_atlas, n_atlas))
-
-        # P(at least from_spellbook pips from spellbook)
-        if from_spellbook <= 0:
-            p_spell = 1.0
-        elif src_spell <= 0 or n_spell <= 0:
-            p_spell = 0.0
-        else:
-            p_spell = float(1 - hypergeom.cdf(from_spellbook - 1, spellbook_size, src_spell, n_spell))
-
-        total_prob += p_atlas * p_spell
-
-    # Also add P(more than pips_needed from atlas alone)
-    p_atlas_enough = threshold_probability(atlas_size, atlas_sources, sites_seen, pips_needed)
-    # Avoid double-counting: the loop above covers from_atlas = 0..pips_needed
-    # from_atlas = pips_needed means from_spellbook = 0 (p_spell=1), so that's included
-    # But we also need from_atlas > pips_needed (all excess from atlas)
-    p_atlas_excess = 0.0
-    for from_atlas in range(pips_needed + 1, min(src_atlas, n_atlas) + 1):
-        p_atlas_excess += float(hypergeom.pmf(from_atlas, atlas_size, src_atlas, n_atlas))
-
-    total_prob += p_atlas_excess
+    total_prob = 0.0
+    for from_spell in range(min(src_spell, n_spell) + 1):
+        p_spell = float(hypergeom.pmf(from_spell, spellbook_size, src_spell, n_spell))
+        needed_from_atlas = max(0, pips_needed - from_spell)
+        p_atlas = threshold_probability_multi_pip(atlas_size, atlas_K1, atlas_K2, sites_seen, needed_from_atlas)
+        total_prob += p_spell * p_atlas
 
     return min(1.0, total_prob)
 
@@ -996,13 +1041,17 @@ class DeckAnalyzer:
 
     # --- Threshold Analysis ---
 
-    def _count_atlas_sources(self, element: str) -> tuple[int, list[str]]:
+    def _count_atlas_sources(self, element: str) -> tuple[int, list[str], int, int]:
         """Count total threshold pips for an element across the atlas.
         Sites like Active Volcano (fire: 2) count as 2 sources per copy.
         Also handles special sites (Annual Fair, Valley of Delight, etc.)
         that provide threshold through abilities rather than innate icons.
-        Returns (count, list_of_contributing_site_names)."""
+        Returns (total_pips, contributors, K1, K2) where:
+          K1 = number of cards with exactly 1 pip of this element
+          K2 = number of cards with exactly 2 pips of this element"""
         count = 0
+        K1 = 0  # cards with 1 pip
+        K2 = 0  # cards with 2 pips
         contributors = []
         for card, name, qty in self.atlas:
             th = card["guardian"].get("thresholds", {})
@@ -1018,33 +1067,35 @@ class DeckAnalyzer:
                     label = f"{qty}x {name}" if qty > 1 else name
 
                     if condition == "pay_mana":
-                        # Annual Fair: counts as source but at +1 mana cost
                         count += qty * pips_each
+                        K1 += qty  # special sites always provide 1 pip each
                         label += " (costs 1 mana)"
                         contributors.append(label)
                     elif condition == "innately_flooded":
-                        # Mismanaged Mortuary: flooded = water site
                         count += qty * pips_each
+                        K1 += qty
                         label += " (flooded)"
                         contributors.append(label)
                     elif condition == "conditional_threshold":
-                        # The Empyrean: full source with downside
                         count += qty * pips_each
+                        K1 += qty
                         contributors.append(label)
                     elif condition in ("genesis_choose", "copy", "genesis_temporary", "scry_atlas"):
-                        # Valley of Delight, Mirror Realm, Blooms, Crossroads:
-                        # fractional, handled in special adjustments
                         pass
                     continue
 
             if pips > 0:
                 count += qty * pips
+                if pips == 1:
+                    K1 += qty
+                elif pips >= 2:
+                    K2 += qty
                 pip_label = f"({pips} pips)" if pips > 1 else ""
                 label = f"{qty}x {name}" if qty > 1 else name
                 if pip_label:
                     label += f" {pip_label}"
                 contributors.append(label)
-        return count, contributors
+        return count, contributors, K1, K2
 
     def _count_spellbook_sources(self, element: str) -> float:
         """Count fractional sources from spellbook cards that provide threshold.
@@ -1096,11 +1147,15 @@ class DeckAnalyzer:
 
     def threshold_analysis(self) -> dict:
         """Full threshold analysis for the deck."""
-        # Count sources per element
+        # Count sources per element (total pips + card breakdown)
         element_sources = {}
         element_contributors = {}
+        element_K1 = {}  # cards with 1 pip per element
+        element_K2 = {}  # cards with 2 pips per element
         for e in ELEMENTS:
-            count, contribs = self._count_atlas_sources(e)
+            count, contribs, k1, k2 = self._count_atlas_sources(e)
+            element_K1[e] = k1
+            element_K2[e] = k2
             if count > 0:
                 element_sources[e] = count
                 element_contributors[e] = contribs
@@ -1128,9 +1183,9 @@ class DeckAnalyzer:
                 turn = earliest_castable_turn(cost, self.archetype)
             sites_seen = get_sites_seen(self.archetype, turn, self.on_the_play,
                                         self.draw_schedule)
-            sites_seen += self.adj_extra_sites
+            sites_seen = int(round(sites_seen + self.adj_extra_sites))
             spells_seen = get_spells_seen(turn, self.on_the_play, self.draw_schedule)
-            spells_seen += self.adj_extra_spells
+            spells_seen = int(round(spells_seen + self.adj_extra_spells))
 
             # Probability of having at least 1 copy of this spell in hand by this turn
             # Hypergeometric: P(X >= 1) from spellbook_size with qty copies after spells_seen draws
@@ -1153,6 +1208,10 @@ class DeckAnalyzer:
                 manual_pips = self.adj_extra_pips.get(e, 0)
                 atlas_eff = base_sources + special_adj + manual_pips
 
+                # K1/K2 for multi-pip model (add special adj as extra 1-pip cards)
+                eff_K1 = element_K1.get(e, 0) + int(round(special_adj + manual_pips))
+                eff_K2 = element_K2.get(e, 0)
+
                 # Spellbook sources (exact count for combined probability)
                 sb_exact = self._count_spellbook_sources_exact(e)
                 sb_fractional = self._count_spellbook_sources(e)
@@ -1160,12 +1219,14 @@ class DeckAnalyzer:
                 if sb_exact > 0:
                     # Use combined probability (atlas + spellbook)
                     prob = combined_threshold_probability(
-                        self.atlas_size, int(round(atlas_eff)), sites_seen, actual_pips,
+                        self.atlas_size, eff_K1, eff_K2, sites_seen, actual_pips,
                         self.spellbook_size, sb_exact, spells_seen,
                     )
                 else:
-                    prob = threshold_probability(
-                        self.atlas_size, atlas_eff + sb_fractional, sites_seen, actual_pips
+                    # Add fractional spellbook sources as extra 1-pip cards
+                    prob = threshold_probability_multi_pip(
+                        self.atlas_size, eff_K1 + int(round(sb_fractional)), eff_K2,
+                        sites_seen, actual_pips
                     )
 
                 element_probs[e] = prob
@@ -1175,6 +1236,8 @@ class DeckAnalyzer:
                     "sources": base_sources,
                     "effective_sources": round(atlas_eff + sb_fractional, 2),
                     "spellbook_sources": sb_exact,
+                    "K1": eff_K1,
+                    "K2": eff_K2,
                     "probability": round(prob * 100, 1),
                 }
 
@@ -1217,26 +1280,29 @@ class DeckAnalyzer:
             if combined_prob < self.target_prob:
                 for future_turn in range(turn + 1, turn + 4):
                     future_sites = get_sites_seen(self.archetype, future_turn, self.on_the_play, self.draw_schedule)
-                    future_sites += self.adj_extra_sites
+                    future_sites = int(round(future_sites + self.adj_extra_sites))
                     if future_sites == sites_seen:
                         continue
                     future_spells = get_spells_seen(future_turn, self.on_the_play, self.draw_schedule)
-                    future_spells += self.adj_extra_spells
+                    future_spells = int(round(future_spells + self.adj_extra_spells))
                     future_prob = 1.0
                     for e, pips in needed.items():
                         actual_pips = max(0, pips - (1 if self.is_elementalist else 0))
+                        special_adj = self._get_special_site_adjustments(e, pips)
                         manual_pips = self.adj_extra_pips.get(e, 0)
-                        atlas_eff = element_sources.get(e, 0) + self._get_special_site_adjustments(e, pips) + manual_pips
+                        eff_K1 = element_K1.get(e, 0) + int(round(special_adj + manual_pips))
+                        eff_K2 = element_K2.get(e, 0)
                         sb_exact = self._count_spellbook_sources_exact(e)
                         if sb_exact > 0:
                             ep = combined_threshold_probability(
-                                self.atlas_size, int(round(atlas_eff)), future_sites, actual_pips,
+                                self.atlas_size, eff_K1, eff_K2, future_sites, actual_pips,
                                 self.spellbook_size, sb_exact, future_spells,
                             )
                         else:
                             sb_frac = self._count_spellbook_sources(e)
-                            ep = threshold_probability(
-                                self.atlas_size, atlas_eff + sb_frac, future_sites, actual_pips
+                            ep = threshold_probability_multi_pip(
+                                self.atlas_size, eff_K1 + int(round(sb_frac)), eff_K2,
+                                future_sites, actual_pips
                             )
                         future_prob *= ep
                     if future_prob >= self.target_prob:
@@ -1312,18 +1378,22 @@ class DeckAnalyzer:
         MODELED_CONDITIONS = {
             "pay_mana", "innately_flooded", "conditional_threshold",
             "in_play", "always", "archetype_override", "conditional_note",
+            "draw_site", "draw_site_deathrite", "draw_and_play_site",
+            "play_top_site", "play_top_site_deathrite",
         }
 
         for section in ["sites", "avatars", "spellbook_sources"]:
             for card_name, info in SPECIAL_CARDS.get(section, {}).items():
                 if card_name in all_card_names:
                     condition = info.get("condition", "")
+                    # Check if modeled via sites_seen_trigger
+                    has_trigger = "sites_seen_trigger" in info
                     found.append({
                         "name": card_name,
                         "section": section,
                         "note": info.get("note", ""),
                         "condition": condition,
-                        "modeled": condition in MODELED_CONDITIONS,
+                        "modeled": condition in MODELED_CONDITIONS or has_trigger,
                     })
         return found
 
