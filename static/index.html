@@ -379,6 +379,12 @@ Format: QUANTITY SITE_NAME"></textarea>
     </div>
 
     <!-- Threshold Analysis -->
+    <!-- Deck Threshold Health -->
+    <div class="card" id="health-card" style="display:none;">
+      <h2>Deck Threshold Health <span class="tip" data-tip="How reliable is your mana base overall?\n\nSince sites provide threshold passively (not consumed per spell), the bottleneck per element is the most demanding spell.\n\nDeck score = probability that ALL elements meet their worst-case requirement on curve.\n\nPer-element: shows the hardest spell for each element and whether your sources cover it.">?</span></h2>
+      <div id="health-content"></div>
+    </div>
+
     <div class="card" id="threshold-card">
       <h2 style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
         Threshold Analysis
@@ -476,33 +482,47 @@ Format: QUANTITY SITE_NAME"></textarea>
       Every spell in Sorcery requires a certain number of element pips (threshold) to cast. Your sites provide those pips. Each turn you reveal sites from your atlas &mdash; the calculator tells you the probability that you've revealed enough of the right element by the turn you want to cast that spell.
     </p>
     <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;">
-      It uses the <strong style="color:var(--text);">hypergeometric distribution</strong> &mdash; the same math as drawing colored balls from an urn without replacement.
+      It uses the <strong style="color:var(--text);">multivariate hypergeometric distribution</strong> &mdash; the same math as drawing colored balls from an urn without replacement, but smarter: it knows that a 2-pip site gives you 2 pips in a single draw.
     </p>
   </div>
 
   <div class="card">
     <h2>The Formula</h2>
+
+    <h3 style="margin-bottom:0.6rem;">The concept</h3>
+    <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;">
+      Your atlas has three kinds of cards for any given element: cards with <strong style="color:var(--text);">0 pips</strong>, cards with <strong style="color:var(--text);">1 pip</strong>, and cards with <strong style="color:var(--text);">2 pips</strong>. You draw <span style="color:var(--air);">n</span> cards. The calculator counts every possible combination of draws and checks which ones give you enough total pips.
+    </p>
+
     <div style="background:var(--bg);border-radius:8px;padding:1.2rem 1.5rem;margin-bottom:1.2rem;overflow-x:auto;">
-      <div style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;line-height:2;text-align:center;">
-        P(X &ge; <span style="color:var(--fire);">k</span>)
-        &nbsp;=&nbsp; 1 &minus; &sum;
-        <span style="font-size:0.75rem;vertical-align:sub;">i=0</span><sup style="color:var(--fire);">k-1</sup>
-        &nbsp;
-        C(<span style="color:var(--water);">K</span>, i)
-        &times;
-        C(<span style="color:var(--earth);">N</span> &minus; <span style="color:var(--water);">K</span>, <span style="color:var(--air);">n</span> &minus; i)
-        &nbsp;/&nbsp;
-        C(<span style="color:var(--earth);">N</span>, <span style="color:var(--air);">n</span>)
+      <div style="font-family:'Cascadia Code','Consolas',monospace;font-size:1rem;line-height:2.2;text-align:center;">
+        <div style="margin-bottom:0.3rem;">
+          P(total pips &ge; <span style="color:var(--fire);">k</span>)
+          &nbsp;=&nbsp; 1 &minus; &sum;
+          <span style="font-size:0.7rem;vertical-align:sub;">j1+2&middot;j2 &lt; <span style="color:var(--fire);">k</span></span>
+        </div>
+        <div>
+          C(<span style="color:var(--water);">K1</span>, j1)
+          &times;
+          C(<span style="color:var(--gold);">K2</span>, j2)
+          &times;
+          C(<span style="color:var(--text2);">K0</span>, <span style="color:var(--air);">n</span>&minus;j1&minus;j2)
+          &nbsp;/&nbsp;
+          C(<span style="color:var(--earth);">N</span>, <span style="color:var(--air);">n</span>)
+        </div>
       </div>
     </div>
 
     <h3 style="margin-bottom:0.6rem;">In plain words</h3>
+    <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;margin-bottom:0.5rem;">
+      Sum up every way to draw cards that <em>don't</em> give you enough pips, then subtract from 1.
+    </p>
     <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;margin-bottom:1.5rem;">
-      <strong style="color:var(--text);">Favorable draws</strong> &times; <strong style="color:var(--text);">Ways to fill the rest</strong> &divide; <strong style="color:var(--text);">All possible draws</strong>
+      For each bad draw: <strong style="color:var(--text);">ways to pick j1 one-pip cards</strong> &times; <strong style="color:var(--text);">ways to pick j2 two-pip cards</strong> &times; <strong style="color:var(--text);">ways to fill the rest with zero-pip cards</strong>, divided by <strong style="color:var(--text);">all possible draws</strong>.
     </p>
 
     <h3 style="margin-bottom:0.6rem;">Variables</h3>
-    <table class="th-table" style="max-width:700px;">
+    <table class="th-table" style="max-width:750px;">
       <thead>
         <tr>
           <th>Symbol</th>
@@ -515,41 +535,68 @@ Format: QUANTITY SITE_NAME"></textarea>
         <tr>
           <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--earth);">N</td>
           <td>Atlas size</td>
-          <td style="color:var(--text2);">Total number of sites in your atlas</td>
-          <td style="color:var(--text2);">15 sites</td>
+          <td style="color:var(--text2);">Total number of cards in your atlas</td>
+          <td style="color:var(--text2);">15 cards</td>
         </tr>
         <tr>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--water);">K</td>
-          <td>Element sources</td>
-          <td style="color:var(--text2);">Sites in your atlas that have the element you need</td>
-          <td style="color:var(--text2);">6 fire sites</td>
+          <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--water);">K1</td>
+          <td>1-pip cards</td>
+          <td style="color:var(--text2);">Cards with exactly 1 pip of the element (e.g. Aqueduct has 1 fire)</td>
+          <td style="color:var(--text2);">3 cards</td>
+        </tr>
+        <tr>
+          <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--gold);">K2</td>
+          <td>2-pip cards</td>
+          <td style="color:var(--text2);">Cards with exactly 2 pips of the element (e.g. Active Volcano has 2 fire)</td>
+          <td style="color:var(--text2);">3 cards</td>
+        </tr>
+        <tr>
+          <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--text2);">K0</td>
+          <td>0-pip cards</td>
+          <td style="color:var(--text2);">Cards with no pips of this element (N &minus; K1 &minus; K2)</td>
+          <td style="color:var(--text2);">9 cards</td>
         </tr>
         <tr>
           <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--air);">n</td>
           <td>Sites seen</td>
-          <td style="color:var(--text2);">How many sites you've revealed by this turn (opening hand + draws)</td>
-          <td style="color:var(--text2);">5 sites by turn 3</td>
+          <td style="color:var(--text2);">How many cards you've revealed by this turn (opening hand + draws)</td>
+          <td style="color:var(--text2);">5 by turn 3</td>
         </tr>
         <tr>
           <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--fire);">k</td>
           <td>Pips needed</td>
-          <td style="color:var(--text2);">The threshold requirement on the spell you want to cast</td>
+          <td style="color:var(--text2);">The threshold requirement on the spell</td>
           <td style="color:var(--text2);">2 for a (FF) spell</td>
         </tr>
         <tr>
           <td style="font-family:'Cascadia Code','Consolas',monospace;font-size:1.1rem;font-weight:700;color:var(--text);">C(a, b)</td>
           <td>Combinations</td>
-          <td style="color:var(--text2);">"a choose b" &mdash; the number of ways to pick b items from a items</td>
-          <td style="color:var(--text2);">C(6,2) = 15 ways</td>
+          <td style="color:var(--text2);">"a choose b" &mdash; ways to pick b items from a items</td>
+          <td style="color:var(--text2);">C(6,2) = 15</td>
         </tr>
       </tbody>
     </table>
   </div>
 
   <div class="card">
+    <h2>Why This Matters</h2>
+    <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;">
+      A simpler formula would count each pip as a separate "ball" in the urn. But that's wrong &mdash; a 2-pip site like Active Volcano gives you both pips in one draw. The old approach <strong style="color:var(--text);">overestimates</strong> your probability.
+    </p>
+    <div style="background:var(--bg);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1.2rem;">
+      <div style="font-size:0.85rem;color:var(--text2);line-height:1.8;">
+        <strong style="color:var(--text);">Example:</strong> 15-card atlas, 3&times; Active Volcano (2F), 3&times; Aqueduct (1F), 5 sites seen, need 1 fire pip.<br>
+        <span style="color:var(--danger);">Naive (counting pips as balls, K=9):</span> <strong style="color:var(--danger);">99.8%</strong><br>
+        <span style="color:var(--success);">Accurate (counting cards, K1=3, K2=3):</span> <strong style="color:var(--success);">95.8%</strong><br>
+        <span style="color:var(--text2);">The naive approach inflates K from 6 cards to 9 "pips", making it seem like you have more sources than you do.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>What Modifies the Calculation</h2>
     <p style="font-size:0.9rem;color:var(--text2);line-height:1.7;margin-bottom:1rem;">
-      The core formula uses four variables. Several game mechanics adjust them before the probability is computed:
+      The core formula uses the variables above. Several game mechanics adjust them before the probability is computed:
     </p>
     <table class="th-table" style="max-width:800px;">
       <thead>
@@ -572,23 +619,28 @@ Format: QUANTITY SITE_NAME"></textarea>
         </tr>
         <tr>
           <td><strong>Special sites</strong></td>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--water);">K</td>
-          <td style="color:var(--text2);">Annual Fair, Valley of Delight, Floodplain &mdash; add full or fractional sources</td>
+          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--water);">K1</td>
+          <td style="color:var(--text2);">Annual Fair, Valley of Delight, Floodplain &mdash; add full or fractional 1-pip sources</td>
         </tr>
         <tr>
           <td><strong>Spellbook sources</strong></td>
-          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--water);">K</td>
-          <td style="color:var(--text2);">Cores, Families, Shrine &mdash; fractional credit based on draw probability</td>
+          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--water);">K1</td>
+          <td style="color:var(--text2);">Cores, Families, Shrine &mdash; combined probability with atlas (spellbook always provides 1 pip each)</td>
         </tr>
         <tr>
           <td><strong>Site-draw cards</strong></td>
           <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--air);">n</td>
-          <td style="color:var(--text2);">Land Surveyor, Landmass, etc. &mdash; adds extra sites seen based on P(drawn) &times; 0.8</td>
+          <td style="color:var(--text2);">Land Surveyor, Landmass, etc. &mdash; adds extra sites seen based on the probability of having drawn the card from your spellbook by turn 3 (roughly 5 spells seen)</td>
         </tr>
         <tr>
-          <td><strong>Multi-element</strong></td>
+          <td><strong>Multi-element spells</strong></td>
           <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--text2);">result</td>
-          <td style="color:var(--text2);">For spells needing two elements, each element's probability is multiplied together</td>
+          <td style="color:var(--text2);">Each element's probability is computed independently, then multiplied together</td>
+        </tr>
+        <tr>
+          <td><strong>Multi-element sites</strong></td>
+          <td style="font-family:'Cascadia Code','Consolas',monospace;color:var(--water);">K1</td>
+          <td style="color:var(--text2);">A site like Aqueduct (1F 1W) counts as a 1-pip card for fire AND a 1-pip card for water &mdash; each element is calculated independently</td>
         </tr>
       </tbody>
     </table>
@@ -597,6 +649,36 @@ Format: QUANTITY SITE_NAME"></textarea>
 </div>
 
 </div><!-- /.app -->
+
+<!-- ======================== FOOTER ======================== -->
+<footer style="
+  max-width: 1400px; margin: 3rem auto 0; padding: 2rem 1rem;
+  border-top: 1px solid var(--border);
+">
+  <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+
+    <div style="flex:1;min-width:280px;">
+      <h3 style="font-size:0.9rem;font-weight:700;color:var(--accent2);margin-bottom:0.8rem;">About This Project</h3>
+      <p style="font-size:0.85rem;color:var(--text2);line-height:1.7;" id="about-text">
+        <!-- Edit this section to tell your story -->
+        This calculator was built to answer a simple question every Sorcery player asks when building a deck: <em style="color:var(--text);">"Do I have enough sources to reliably cast this spell?"</em>
+      </p>
+    </div>
+
+    <div style="flex:1;min-width:280px;">
+      <h3 style="font-size:0.9rem;font-weight:700;color:var(--accent2);margin-bottom:0.8rem;">Process & Inspirations</h3>
+      <p style="font-size:0.85rem;color:var(--text2);line-height:1.7;" id="inspirations-text">
+        <!-- Edit this section to credit your inspirations -->
+      </p>
+    </div>
+
+  </div>
+
+  <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid var(--border);font-size:0.75rem;color:var(--text2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
+    <span>Sorcery: Contested Realm is a trademark of Erik's Curiosa. This tool is unofficial and fan-made.</span>
+    <span>Card data from <a href="https://curiosa.io" style="color:var(--accent2);">curiosa.io</a></span>
+  </div>
+</footer>
 
 <div id="tooltip-box"></div>
 
@@ -1241,10 +1323,93 @@ function renderResults(report, target) {
   renderThresholdSection(report, target, currentTurn);
 }
 
+function renderHealthSummary(spells, elemSources, target) {
+  const healthCard = document.getElementById('health-card');
+  const healthEl = document.getElementById('health-content');
+  if (!healthCard || !healthEl || !spells.length) return;
+
+  // Per element: find the worst-case spell (lowest probability)
+  // Since sites provide threshold passively, the bottleneck is the hardest spell per element
+  const elemWorst = {}; // element -> {spell, prob, pips, sources}
+  for (const sp of spells) {
+    for (const [elem, detail] of Object.entries(sp.element_details)) {
+      const prob = detail.probability / 100;
+      if (!elemWorst[elem] || prob < elemWorst[elem].prob) {
+        elemWorst[elem] = {
+          spell: sp.name,
+          prob: prob,
+          pips: detail.pips,
+          sources: detail.sources,
+          surplus: detail.surplus,
+        };
+      }
+    }
+  }
+
+  // Deck score = product of worst-case probability per element
+  // This answers: "what's the chance ALL elements are covered on curve?"
+  let deckScore = 1.0;
+  const elemEntries = [];
+  for (const elem of ['fire', 'water', 'earth', 'air']) {
+    if (!elemWorst[elem]) continue;
+    deckScore *= elemWorst[elem].prob;
+    elemEntries.push({ elem, ...elemWorst[elem] });
+  }
+
+  // Spell stats
+  const totalSpells = spells.length;
+  const meetingTarget = spells.filter(s => s.meets_target).length;
+  const worstSpell = spells.reduce((w, s) => s.combined_probability < w.combined_probability ? s : w, spells[0]);
+
+  // Color for deck score
+  const scorePct = deckScore * 100;
+  const scoreColor = scorePct >= target * 100 ? 'var(--success)' : scorePct >= target * 100 - 10 ? 'var(--warn)' : 'var(--danger)';
+
+  let html = '';
+
+  // Top row: score + stats
+  html += `<div style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">`;
+  html += `<div style="text-align:center;">
+    <div style="font-size:2.2rem;font-weight:800;color:${scoreColor};font-variant-numeric:tabular-nums;line-height:1;">${scorePct.toFixed(1)}%</div>
+    <div style="font-size:0.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-top:0.2rem;">Deck Score</div>
+  </div>`;
+  html += `<div style="display:flex;gap:1rem;flex-wrap:wrap;">`;
+  html += `<div style="font-size:0.85rem;color:var(--text2);">Spells on target: <strong style="color:${meetingTarget === totalSpells ? 'var(--success)' : 'var(--text)'};">${meetingTarget}/${totalSpells}</strong></div>`;
+  html += `<div style="font-size:0.85rem;color:var(--text2);">Weakest: <strong style="color:var(--danger);">${worstSpell.name}</strong> at <strong>${worstSpell.combined_probability}%</strong></div>`;
+  html += `</div></div>`;
+
+  // Per-element bottleneck
+  if (elemEntries.length > 0) {
+    html += `<div style="display:flex;gap:0.6rem;flex-wrap:wrap;">`;
+    for (const e of elemEntries) {
+      const color = ELEM_COLORS[e.elem] || 'var(--text2)';
+      const probColor = e.prob >= target ? 'var(--success)' : e.prob >= target - 0.1 ? 'var(--warn)' : 'var(--danger)';
+      const surplusSign = e.surplus > 0 ? '+' : '';
+      const surplusColor = e.surplus >= 2 ? 'var(--success)' : e.surplus >= 0 ? 'var(--warn)' : 'var(--danger)';
+      html += `<div style="background:var(--bg);border-radius:6px;padding:0.5rem 0.8rem;border-left:3px solid ${color};flex:1;min-width:140px;">
+        <div style="font-size:0.7rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em;">${e.elem}</div>
+        <div style="font-size:0.85rem;margin-top:0.2rem;">
+          <span style="color:${probColor};font-weight:700;">${(e.prob*100).toFixed(1)}%</span>
+          <span style="color:var(--text2);font-size:0.75rem;"> for ${e.pips}pip</span>
+          <span style="color:${surplusColor};font-size:0.75rem;font-weight:600;"> (${surplusSign}${e.surplus})</span>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text2);margin-top:0.15rem;">${e.spell}</div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  healthEl.innerHTML = html;
+  healthCard.style.display = '';
+}
+
 function renderThresholdSection(report, target, currentTurn) {
   const th = report.threshold;
   const elemSources = th.element_sources;
   const spells = th.spells;
+
+  // === Deck Threshold Health ===
+  renderHealthSummary(spells, elemSources, target);
 
   // Turn label for header
   const turnLabel = currentTurn > 0 ? ` (all at Turn ${currentTurn})` : '';
@@ -1292,18 +1457,37 @@ function renderThresholdSection(report, target, currentTurn) {
       thPips += pipSpan(elem, detail.pips) + ' ';
     }
 
+    // Build surplus/deficit gauge per element
     let neededCol = '';
-    if (!sp.meets_target && sp.recommendations) {
-      const parts = [];
-      for (const [elem, r] of Object.entries(sp.recommendations)) {
-        parts.push(`${r.need} ${elem} (have ${r.have})`);
-      }
-      neededCol = parts.join(', ');
-      if (sp.later_turn) {
-        neededCol += `<br><span style="color:var(--text2)">or T${sp.later_turn.turn} at ${sp.later_turn.probability}%</span>`;
-      }
-    } else {
-      neededCol = '<span style="color:var(--success)">OK</span>';
+    const surplusChips = [];
+    for (const [elem, detail] of Object.entries(sp.element_details)) {
+      const s = detail.surplus;
+      if (s == null) continue;
+      const clamped = Math.max(-5, Math.min(5, s));
+      const color = s >= 2 ? 'var(--success)' : s >= 0 ? 'var(--warn)' : 'var(--danger)';
+      const sign = s > 0 ? '+' : '';
+      const letter = {fire:'F',water:'W',earth:'E',air:'A'}[elem] || elem[0].toUpperCase();
+      surplusChips.push(`<span style="color:${color};font-weight:600;" title="${elem}: ${detail.sources} sources, surplus ${detail.surplus >= 0 ? '+' : ''}${detail.surplus} for ${(target*100).toFixed(0)}% target">${letter}:${sign}${clamped}</span>`);
+    }
+    // Gauge bar
+    let gaugeHtml = '';
+    for (const [elem, detail] of Object.entries(sp.element_details)) {
+      const s = detail.surplus;
+      if (s == null) continue;
+      const clamped = Math.max(-5, Math.min(5, s));
+      const elemColor = ELEM_COLORS[elem] || 'var(--text2)';
+      // 11 segments: -5 to +5, center is 0
+      const pos = clamped + 5; // 0-10
+      gaugeHtml += `<div style="display:flex;align-items:center;gap:3px;margin-bottom:1px;" title="${elem}: ${detail.sources} sources, surplus ${detail.surplus >= 0 ? '+' : ''}${detail.surplus} for ${(target*100).toFixed(0)}% target">
+        <div style="width:55px;height:8px;background:var(--bg);border-radius:4px;position:relative;overflow:hidden;">
+          <div style="position:absolute;left:calc(50% - 1px);top:-2px;width:2px;height:12px;background:var(--text2);border-radius:1px;z-index:1;"></div>
+          <div style="position:absolute;left:${(pos/10)*100}%;top:0;width:6px;height:100%;background:${elemColor};border-radius:3px;transform:translateX(-3px);z-index:2;"></div>
+        </div>
+      </div>`;
+    }
+    neededCol = `<div style="display:flex;align-items:center;gap:6px;">${surplusChips.join(' ')}<div>${gaugeHtml}</div></div>`;
+    if (!sp.meets_target && sp.later_turn) {
+      neededCol += `<div style="font-size:0.72rem;color:var(--text2);margin-top:2px;">T${sp.later_turn.turn} at ${sp.later_turn.probability}%</div>`;
     }
 
     // Highlight if spell can't even be cast yet (cost > current turn)
@@ -1351,11 +1535,11 @@ function renderSpecialCardsRef(report) {
     always: 'All threshold requirements are reduced by 1 pip.\nA spell needing FF becomes effectively F, a spell needing W becomes free.',
     archetype_override: 'Forces the Pathfinder archetype and sites-seen table.\nNo opening hand sites, plays top site each turn.',
     conditional_note: 'Threshold is already in the card database and counted in atlas source totals.\nThe condition (empty site / adjacent to void) is assumed to be met.',
-    draw_site: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nMore copies = higher chance of drawing it = more bonus sites.',
-    draw_site_deathrite: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nLess reliable than genesis (must die first), but still modeled.',
-    draw_and_play_site: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nDraws a site and may play it when cast.',
-    play_top_site: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nPlays the top site from your atlas.',
-    play_top_site_deathrite: 'Adds extra sites seen using P(drawn at least 1 copy by ~T3) × 0.8.\nPlays top site on death — must be drawn, cast, and die first.',
+    draw_site: 'Adds extra sites seen = P(drawn at least 1 copy by ~T3).\nMore copies = higher chance of drawing it = more bonus sites.',
+    draw_site_deathrite: 'Adds extra sites seen = P(drawn at least 1 copy by ~T3).\nTriggered on death.',
+    draw_and_play_site: 'Adds extra sites seen = P(drawn at least 1 copy by ~T3).\nDraws a site and may play it when cast.',
+    play_top_site: 'Adds extra sites seen = P(drawn at least 1 copy by ~T3).\nPlays the top site from your atlas.',
+    play_top_site_deathrite: 'Adds extra sites seen = P(drawn at least 1 copy by ~T3).\nPlays top site on death.',
   };
   const MANUAL_TIPS = {
     scry: 'Add +1 to Extra sites seen for every 2 turns you expect to scry.',
@@ -1383,6 +1567,24 @@ function renderSpecialCardsRef(report) {
       html += `<div style="margin-bottom:0.3rem;"><span style="color:var(--success);font-weight:600;">${c.name}</span> <span class="tip" data-tip="${tipText.replace(/"/g, '&quot;')}">?</span> — <span style="color:var(--text2);">${c.note}</span></div>`;
     }
     html += '</div>';
+  }
+
+  // Sites-seen bonus breakdown
+  const bonus = report.threshold?.assumptions?.sites_seen_bonus || [];
+  if (bonus.length > 0) {
+    const totalBonus = bonus.reduce((s, b) => s + b.bonus, 0);
+    const rounded = Math.round(totalBonus);
+    html += '<div style="margin-bottom:0.8rem;background:var(--bg);border-radius:6px;padding:0.8rem 1rem;">';
+    html += '<h3 style="color:var(--air);margin-bottom:0.4rem;">Extra sites seen from spellbook cards</h3>';
+    for (const b of bonus) {
+      html += `<div style="font-size:0.8rem;margin-bottom:0.2rem;color:var(--text2);">`;
+      html += `<strong style="color:var(--text);">${b.qty}x ${b.name}</strong>: `;
+      html += `${b.p_drawn}% chance drawn by T3 → <strong style="color:var(--air);">+${b.bonus.toFixed(2)}</strong>`;
+      html += `</div>`;
+    }
+    html += `<div style="margin-top:0.4rem;padding-top:0.4rem;border-top:1px solid var(--border);font-size:0.85rem;">`;
+    html += `Total: <strong style="color:var(--air);">+${totalBonus.toFixed(2)}</strong> → rounds to <strong style="color:${rounded > 0 ? 'var(--success)' : 'var(--text2)'};">+${rounded} site${rounded !== 1 ? 's' : ''} seen</strong>`;
+    html += `</div></div>`;
   }
 
   // Orange cards — not modeled

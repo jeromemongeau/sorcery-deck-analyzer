@@ -432,13 +432,8 @@ class DeckAnalyzer:
         """Count extra sites seen from spellbook cards that draw/play sites.
 
         Uses hypergeometric probability of having drawn at least 1 copy
-        by a mid-game turn (~5 spells seen from a spellbook), multiplied
-        by a reliability discount based on trigger type:
-          - genesis: 0.8 (must cast it, triggers on entry)
-          - cast: 0.9 (just cast the spell)
-          - deathrite: 0.4 (must cast, then it must die)
+        by a mid-game turn (~5 spells seen from a spellbook).
         """
-        TRIGGER_DISCOUNT = {"genesis": 0.8, "cast": 0.8, "deathrite": 0.8}
         MID_GAME_SPELLS_SEEN = 5  # ~turn 3 for midrange
 
         bonus = 0.0
@@ -446,13 +441,29 @@ class DeckAnalyzer:
             special = SPECIAL_SPELLBOOK_SOURCES.get(name)
             if not special or "sites_seen_trigger" not in special:
                 continue
-            trigger = special["sites_seen_trigger"]
-            discount = TRIGGER_DISCOUNT.get(trigger, 0.5)
             # P(drawn at least 1 copy by mid-game)
             p_drawn = 1 - float(hypergeom.cdf(0, self.spellbook_size, qty,
                                                min(MID_GAME_SPELLS_SEEN, self.spellbook_size)))
-            bonus += p_drawn * discount
+            bonus += p_drawn
         return bonus
+
+    def _get_sites_seen_breakdown(self) -> list:
+        """Return per-card breakdown of sites_seen_bonus for display."""
+        MID_GAME_SPELLS_SEEN = 5
+        result = []
+        for card, name, qty in self.spellbook:
+            special = SPECIAL_SPELLBOOK_SOURCES.get(name)
+            if not special or "sites_seen_trigger" not in special:
+                continue
+            p_drawn = 1 - float(hypergeom.cdf(0, self.spellbook_size, qty,
+                                               min(MID_GAME_SPELLS_SEEN, self.spellbook_size)))
+            result.append({
+                "name": name,
+                "qty": qty,
+                "p_drawn": round(p_drawn * 100, 1),
+                "bonus": round(p_drawn, 2),
+            })
+        return result
 
     def _parse_deck(self, deck: dict):
         # Avatar
@@ -1230,6 +1241,48 @@ class DeckAnalyzer:
                     )
 
                 element_probs[e] = prob
+                # Compute surplus: how many 1-pip cards can you remove (or need to add)
+                # and still meet target probability
+                surplus = 0
+                if prob >= self.target_prob:
+                    # Overshoot: try removing 1-pip cards until probability drops below target
+                    for remove in range(1, eff_K1 + 1):
+                        test_K1 = eff_K1 - remove
+                        if sb_exact > 0:
+                            test_p = combined_threshold_probability(
+                                self.atlas_size, test_K1, eff_K2, sites_seen, actual_pips,
+                                self.spellbook_size, sb_exact, spells_seen,
+                            )
+                        else:
+                            test_p = threshold_probability_multi_pip(
+                                self.atlas_size, test_K1 + int(round(sb_fractional)), eff_K2,
+                                sites_seen, actual_pips
+                            )
+                        if test_p < self.target_prob:
+                            surplus = remove - 1
+                            break
+                    else:
+                        surplus = eff_K1  # can remove all 1-pip and still meet target
+                else:
+                    # Deficit: try adding 1-pip cards until probability meets target
+                    for add in range(1, self.atlas_size + 1):
+                        test_K1 = eff_K1 + add
+                        if sb_exact > 0:
+                            test_p = combined_threshold_probability(
+                                self.atlas_size, test_K1, eff_K2, sites_seen, actual_pips,
+                                self.spellbook_size, sb_exact, spells_seen,
+                            )
+                        else:
+                            test_p = threshold_probability_multi_pip(
+                                self.atlas_size, test_K1 + int(round(sb_fractional)), eff_K2,
+                                sites_seen, actual_pips
+                            )
+                        if test_p >= self.target_prob:
+                            surplus = -add
+                            break
+                    else:
+                        surplus = -5
+
                 element_details[e] = {
                     "pips": pips,
                     "effective_pips": actual_pips,
@@ -1239,6 +1292,7 @@ class DeckAnalyzer:
                     "K1": eff_K1,
                     "K2": eff_K2,
                     "probability": round(prob * 100, 1),
+                    "surplus": surplus,
                 }
 
             # Combined probability for multi-element
@@ -1349,6 +1403,7 @@ class DeckAnalyzer:
             "extra_sites": self.adj_extra_sites,
             "extra_spells": self.adj_extra_spells,
             "extra_pips": {e: v for e, v in self.adj_extra_pips.items() if v > 0},
+            "sites_seen_bonus": self._get_sites_seen_breakdown(),
         }
 
         return {
